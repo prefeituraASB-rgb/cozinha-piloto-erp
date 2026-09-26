@@ -7,6 +7,11 @@ const PORT = process.env.PORT || 8000;
 app.use(express.json());
 app.use(express.static('public'));
 
+// 🚀 CORREÇÃO DE ENGENHARIA (Steve Jobs UX): Redireciona a raiz "/" automaticamente para a tela de login
+app.get('/', (req, res) => {
+    res.redirect('/index.html');
+});
+
 // ==========================================================================
 // 🔌 CONEXÃO REAL COM O MONGO ATLAS (HD NA NUVEM)
 // ==========================================================================
@@ -39,13 +44,13 @@ const ProdutoSchema = new mongoose.Schema({
 // 3. Tabela: Lotes e Entradas Avançadas (Dupla Modalidade: Nota Fiscal ou Individual)
 const EntradaSchema = new mongoose.Schema({
     produto_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Produto', required: true },
-    nome_produto_snapshot: { type: String, required: true }, // Backup textual do nome
+    nome_produto_snapshot: { type: String, required: true }, 
     quantidade_inicial: { type: Number, required: true },
-    quantidade_atual: { type: Number, required: true }, // Saldo operacional
+    quantidade_atual: { type: Number, required: true }, 
     tipo_documento: { type: String, enum: ['NOTA FISCAL', 'DOAÇÃO', 'DOCUMENTO INTERNO', 'ENTRADA INDIVIDUAL'], required: true },
-    numero_documento: { type: String, required: true }, // NF ou Código interno
+    numero_documento: { type: String, required: true }, 
     estoque_minimo: { type: Number, required: true },
-    data_validade: { type: Date, required: true }, // Base para a regra de 90 dias
+    data_validade: { type: Date, required: true }, 
     numero_lote: { type: String, required: true },
     usuario_responsavel: { type: String, required: true }
 }, { timestamps: true });
@@ -56,8 +61,8 @@ const SaidaSchema = new mongoose.Schema({
     nome_produto: { type: String, required: true },
     quantidade_retirada: { type: Number, required: true },
     tipo_saida: { type: String, enum: ['RECEITA', 'ITEM A ITEM'], required: true },
-    nome_cardapio: { type: String, default: "" }, // Preenchido apenas se for via receita
-    local_envio_destino: { type: String, required: true }, // Escola / Unidade
+    nome_cardapio: { type: String, default: "" }, 
+    local_envio_destino: { type: String, required: true }, 
     numero_lote_origem: { type: String, required: true },
     usuario_responsavel: { type: String, required: true }
 }, { timestamps: true });
@@ -68,7 +73,7 @@ const CardapioSchema = new mongoose.Schema({
     itens_composicao: [{
         produto_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Produto' },
         nome_produto: String,
-        quantidade_por_aluno: { type: Number, required: true } // Gramatura individual decimal
+        quantidade_por_aluno: { type: Number, required: true } 
     }]
 }, { timestamps: true });
 
@@ -77,7 +82,7 @@ const QuebraSchema = new mongoose.Schema({
     nome_produto: { type: String, required: true },
     numero_lote: { type: String, required: true },
     quantidade_danificada: { type: Number, required: true },
-    motivo_justificado: { type: String, required: true }, // Ex: Quebra de prato, azedou, vazamento gás
+    motivo_justificado: { type: String, required: true }, 
     usuario_responsavel: { type: String, required: true }
 }, { timestamps: true });
 
@@ -101,7 +106,7 @@ app.get('/api/:tabela', async (req, res) => {
         
         if (tabela === 'usuarios') colecao = await Usuario.find();
         if (tabela === 'produtos') colecao = await Produto.find().sort({ nome_produto: 1 });
-        if (tabela === 'entradas') colecao = await Entrada.find().sort({ data_validade: 1 }); // Ordena por PEPS
+        if (tabela === 'entradas') colecao = await Entrada.find().sort({ data_validade: 1 }); 
         if (tabela === 'saidas') colecao = await Saida.find().sort({ createdAt: -1 });
         if (tabela === 'cardapios') colecao = await Cardapio.find();
         if (tabela === 'quebras') colecao = await Quebra.find().sort({ createdAt: -1 });
@@ -131,5 +136,4 @@ app.post('/api/salvar/:tabela', async (req, res) => {
     }
 });
 
-// Inicialização oficial do servidor
 app.listen(PORT, () => console.log(`🚀 Motor ERP ativo e aguardando requisições na porta ${PORT}`));
