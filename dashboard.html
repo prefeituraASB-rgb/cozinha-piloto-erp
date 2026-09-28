@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Geral - ERP Cozinha Piloto</title>
+    <!-- Importação das folhas de estilo unificadas do ecossistema -->
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/operacoes.css">
+    <style>
+        /* Estilos específicos para os Widgets estilo macOS Control Center */
+        .grid-widgets {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .widget-mac {
+            background: var(--mac-card);
+            border-radius: var(--radius-mac);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 120px;
+            position: relative;
+            overflow: hidden;
+        }
+        .widget-mac::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+        }
+        .widget-azul::before { background: var(--azul-apple); }
+        .widget-amarelo::before { background: var(--amarelo-apple); }
+        .widget-vermelho::before { background: var(--vermelho-apple); }
+        
+        .widget-titulo {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--cinza-texto-secundario);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .widget-valor {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--cinza-texto-principal);
+            margin-top: 10px;
+            letter-spacing: -1px;
+        }
+        .widget-rodape {
+            font-size: 0.75rem;
+            color: var(--cinza-texto-secundario);
+            margin-top: 8px;
+            font-weight: 500;
+        }
+        .alerta-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Translúcida macOS Injetada via JS -->
+    <aside id="sidebar" class="sidebar"></aside>
+
+    <!-- Conteúdo Principal à direita do menu fixo -->
+    <main class="main-content">
+        <header class="page-header">
+            <div>
+                <h1 id="boas-vindas-titulo">Painel de Controle Operacional</h1>
+                <p>Monitoramento preventivo de lotes, auditoria de consumo e segurança alimentar do município.</p>
+            </div>
+        </header>
+
+        <!-- 📊 GRID DE WIDGETS DE SUMÁRIO DIGITAL (Steve Jobs Control Center) -->
+        <section class="grid-widgets">
+            <div class="widget-mac widget-azul">
+                <div class="widget-titulo">📦 Lotes Ativos</div>
+                <div class="widget-valor" id="w-lotes-ativos">0</div>
+                <div class="widget-rodape">Registros sob custódia física</div>
+            </div>
+            <div class="widget-mac widget-amarelo">
+                <div class="widget-titulo">⏳ Alerta 90 Dias</div>
+                <div class="widget-valor" id="w-vencimento-90" style="color: var(--amarelo-apple);">0</div>
+                <div class="widget-rodape">Itens próximos ao vencimento</div>
+            </div>
+            <div class="widget-mac widget-vermelho">
+                <div class="widget-titulo">⚠️ Estoque Crítico</div>
+                <div class="widget-valor" id="w-estoque-critico" style="color: var(--vermelho-apple);">0</div>
+                <div class="widget-rodape">Abaixo do estoque mínimo</div>
+            </div>
+        </section>
+        <!-- 🛡️ SEÇÃO DE ALERTAS PREDITIVOS AVANÇADOS (Regra dos 90 Dias e Risco de Falta) -->
+        <div class="alerta-container">
+            
+            <!-- Painel Esquerdo: Alerta Preventivo de Vencimento -->
+            <div class="painel-operacional">
+                <div class="painel-titulo" style="color: var(--amarelo-apple);">⏳ Monitoramento Preditivo de Validade (90 Dias)</div>
+                <div class="tabela-container">
+                    <table class="tabela-mac">
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Lote</th>
+                                <th>Saldo</th>
+                                <th>Dias Restantes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-preditiva-vencimento">
+                            <!-- Injetado dinamicamente via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Painel Direito: Risco de Desabastecimento e Ruptura -->
+            <div class="painel-operacional">
+                <div class="painel-titulo" style="color: var(--vermelho-apple);">⚠️ Ruptura de Estoque e Defasagem Mínima</div>
+                <div class="tabela-container">
+                    <table class="tabela-mac">
+                        <thead>
+                            <tr>
+                                <th>Produto / Material</th>
+                                <th>Saldo Atual</th>
+                                <th>Mínimo Exigido</th>
+                                <th>Status Fiscal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-preditiva-falta">
+                            <!-- Injetado dinamicamente via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Scripts de Segurança e Lógica Dinâmica Cruzada -->
+    <script src="js/autenticador-sessao.js"></script>
+    <script src="js/menu.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

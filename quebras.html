@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perdas e Quebras - ERP Cozinha Piloto</title>
+    <!-- Importação das folhas de estilo unificadas do ecossistema -->
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/operacoes.css">
+</head>
+<body>
+
+    <!-- Sidebar Translúcida macOS Injetada via JS -->
+    <aside id="sidebar" class="sidebar"></aside>
+
+    <!-- Conteúdo Principal à direita do menu fixo -->
+    <main class="main-content">
+        <header class="page-header">
+            <div>
+                <h1>Módulo de Quebras, Avarias & Perdas Técnico-Sanitárias</h1>
+                <p>Registre e justifique ocorrências extraordinárias de descarte de insumos, consumo de gás ou danos em utensílios duráveis.</p>
+            </div>
+        </header>
+
+        <!-- ================= PAINEL DE LANÇAMENTO DE OCORRÊNCIA ================= -->
+        <div class="painel-operacional">
+            <div class="painel-titulo" style="color: var(--vermelho-apple);">⚠️ Declaração Oficial de Perda Física ou Extravio</div>
+            <form id="form-registro-quebra" onsubmit="processarRegistroDeQuebra(event)">
+                <div class="grid-formulario" style="align-items: flex-end;">
+                    
+                    <div class="campo-grupo">
+                        <label for="que-lote-id">Selecione o Lote Afetado (Saldo em Nuvem)</label>
+                        <select id="que-lote-id" required>
+                            <option value="">Carregando lotes ativos...</option>
+                        </select>
+                    </div>
+
+                    <div class="campo-grupo">
+                        <label for="que-quantidade">Quantidade Danificada / Perdida</label>
+                        <input type="number" id="que-quantidade" required min="0.01" step="0.01" placeholder="0.00">
+                    </div>
+
+                    <div class="campo-grupo">
+                        <label for="que-motivo">Motivo Justificado do Descarte / Ocorrência</label>
+                        <select id="que-motivo" required>
+                            <option value="">Selecione a Justificativa...</option>
+                            <option value="Avaria Sanitária / Alimento Estragado">Alimento Estragado / Prazo Vencido</option>
+                            <option value="Dano Físico / Embalagem Rompida">Embalagem Rompida / Quebra Física</option>
+                            <option value="Consumo Técnico Industrial (Gás/Fósforo)">Consumo Técnico Industrial (Ex: Gás de Cozinha)</option>
+                            <option value="Extravio / Quebra de Bens Duráveis">Dano / Extravio de Utensílio (Pratos/Talheres)</option>
+                        </select>
+                    </div>
+
+                    <div class="campo-grupo">
+                        <button type="submit" class="btn-apple" style="height: 38px; background-color: var(--vermelho-apple);">
+                            Homologar Ocorrência
+                        </button>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+        <!-- ================= LISTAGEM HISTÓRICA DE OCORRÊNCIAS ================= -->
+        <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; margin-top: 30px;">Histórico de Perdas Auditadas pelo Município</h2>
+        <div class="tabela-container">
+            <table class="tabela-mac">
+                <thead>
+                    <tr>
+                        <th>Data / Hora</th>
+                        <th>Produto / Item Afetado</th>
+                        <th>Lote Identificado</th>
+                        <th>Quantidade Perdida</th>
+                        <th>Justificativa Legal / Motivo</th>
+                        <th>Operador Declarante</th>
+                    </tr>
+                </thead>
+                <tbody id="corpo-tabela-quebras">
+                    <!-- Injetado dinamicamente via JS -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Scripts de Segurança e Lógica Dinâmica Cruzada -->
+    <script src="js/autenticador-sessao.js"></script>
+    <script src="js/menu.js"></script>
+    <script src="js/quebras.js"></script>
+</body>
+</html>

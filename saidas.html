@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saída de Itens - ERP Cozinha Piloto</title>
+    <!-- Importação das folhas de estilo do ecossistema -->
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/operacoes.css">
+</head>
+<body>
+
+    <!-- Sidebar Translúcida macOS Injetada via JS -->
+    <aside id="sidebar" class="sidebar"></aside>
+
+    <!-- Conteúdo Principal à direita do menu fixo -->
+    <main class="main-content">
+        <header class="page-header">
+            <div>
+                <h1>Distribuição & Saída de Itens</h1>
+                <p>Realize a baixa de mercadorias item a item ou efetue o consumo em massa via cardápio planejado.</p>
+            </div>
+        </header>
+
+        <!-- 🔄 Abas Superiores de Controle Operacional (Steve Jobs UX) -->
+        <nav class="abas-navegacao">
+            <button class="aba-item ativa" onclick="alternarModalidadeSaida('item', this)">📦 Baixa Item a Item (Isolada)</button>
+            <button class="aba-item" onclick="alternarModalidadeSaida('cardapio', this)">📋 Consumo por Cardápio Escolar</button>
+        </nav>
+
+        <!-- ================= MODALIDADE A: BAIXA ITEM A ITEM (ISOLADA) ================= -->
+        <div id="painel-saida-item" class="painel-operacional" style="display: block;">
+            <div class="painel-titulo">📦 Retirada Direta de Insumos ou Materiais</div>
+            <form id="form-saida-item" onsubmit="processarSaidaItemAItem(event)">
+                <div class="grid-formulario">
+                    
+                    <div class="campo-grupo">
+                        <label for="sai-lote-id">Selecione o Lote Disponível (Saldo Real)</label>
+                        <select id="sai-lote-id" required onchange="atualizarInformativoMetricaItem(this)">
+                            <option value="">Carregando lotes da nuvem...</option>
+                        </select>
+                    </div>
+
+                    <div class="campo-grupo">
+                        <label for="sai-quantidade">Quantidade a Retirar <span id="txt-metrica-item" style="color:var(--cinza-texto-secundario)"></span></label>
+                        <input type="number" id="sai-quantidade" required min="0.01" step="0.01" placeholder="0.00">
+                    </div>
+
+                    <div class="campo-grupo">
+                        <label for="sai-destino">Unidade Escolar / Destino Oficial</label>
+                        <select id="sai-destino" required>
+                            <option value="">Selecione o Destino...</option>
+                            <option value="EMEB Prefeito Jair Gilberto Carniato">EMEB Prefeito Jair Gilberto Carniato</option>
+                            <option value="EMEB Professora Maria Cecília de Moraes">EMEB Professora Maria Cecília de Moraes</option>
+                            <option value="Creche Municipal Menino Jesus">Creche Municipal Menino Jesus</option>
+                            <option value="Consumo Interno - Cozinha Piloto">Consumo Interno - Cozinha Piloto</option>
+                        </select>
+                    </div>
+
+                    <div class="campo-grupo" style="justify-content: flex-end;">
+                        <button type="submit" class="btn-apple" style="height: 38px; background-color: var(--azul-apple);">Homologar Saída</button>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+        <!-- ================= MODALIDADE B: CONSUMO POR CARDÁPIO ESCOLAR ================= -->
+        <div id="painel-saida-cardapio" class="painel-operacional" style="display: none;">
+            <div class="painel-titulo">📋 Lançamento e Abatimento em Massa por Cardápio</div>
+            <form id="form-saida-cardapio" onsubmit="processarSaidaPorCardapio(event)">
+                <div class="grid-formulario">
+                    
+                    <div class="campo-grupo">
+                        <label for="sai-cardapio-id">Selecione o Cardápio Homologado</label>
+                        <select id="sai-cardapio-id" required>
+                            <option value="">Selecione a Ficha...</option>
+                        </select>
+                    </div>
+
+                    <div class="campo-grupo">
+                        <label for="sai-cardapio-alunos">Total de Alunos Alimentados</label>
+                        <input type="number" id="sai-cardapio-alunos" required min="1" placeholder="Ex: 150 crianças">
+                    </div>
+
+                    <div class="campo-grupo">
+                        <label for="sai-cardapio-destino">Unidade Escolar Atendida</label>
+                        <select id="sai-cardapio-destino" required>
+                            <option value="">Selecione a Escola...</option>
+                            <option value="EMEB Prefeito Jair Gilberto Carniato">EMEB Prefeito Jair Gilberto Carniato</option>
+                            <option value="EMEB Professora Maria Cecília de Moraes">EMEB Professora Maria Cecília de Moraes</option>
+                            <option value="Creche Municipal Menino Jesus">Creche Municipal Menino Jesus</option>
+                        </select>
+                    </div>
+
+                    <div class="campo-grupo" style="justify-content: flex-end;">
+                        <button type="submit" class="btn-apple" style="height: 38px; background-color: var(--verde-apple);">Abater Cardápio (PEPS)</button>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+
+        <!-- ================= LISTAGEM DE HISTÓRICO RECENTE DE SAÍDAS ================= -->
+        <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; margin-top: 30px;">Histórico de Baixas e Distribuição Diária</h2>
+        <div class="tabela-container">
+            <table class="tabela-mac">
+                <thead>
+                    <tr>
+                        <th>Data / Hora</th>
+                        <th>Tipo de Baixa</th>
+                        <th>Produto Retirado</th>
+                        <th>Lote Origem</th>
+                        <th>Qtd Retirada</th>
+                        <th>Destino / Unidade Beneficiada</th>
+                        <th>Operador Responsável</th>
+                    </tr>
+                </thead>
+                <tbody id="corpo-tabela-saidas">
+                    <!-- Injetado dinamicamente via JS -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="js/autenticador-sessao.js"></script>
+    <script src="js/menu.js"></script>
+    <script src="js/saidas.js"></script>
+</body>
+</html>

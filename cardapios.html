@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Cardápios - ERP Cozinha Piloto</title>
+    <!-- Importação das folhas de estilo unificadas do ecossistema -->
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/operacoes.css">
+    <style>
+        /* Estilos específicos para linhas de ingredientes dinâmicos */
+        .ingrediente-linha {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+            animation: deslizarSuave 0.2s ease-out;
+        }
+        @keyframes deslizarSuave {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Translúcida macOS Injetada via JS -->
+    <aside id="sidebar" class="sidebar"></aside>
+
+    <!-- Conteúdo Principal à direita do menu fixo -->
+    <main class="main-content">
+        <header class="page-header">
+            <div>
+                <h1>Fichas Técnicas & Planejamento de Cardápios</h1>
+                <p>Cadastre os pratos homologados e estabeleça a gramatura exata por aluno para automatizar as baixas de estoque.</p>
+            </div>
+        </header>
+
+        <!-- ================= PAINEL DE CRIAÇÃO DE NOVA FICHA TÉCNICA ================= -->
+        <div class="painel-operacional">
+            <div class="painel-titulo">🍏 Engenharia Nutricional - Nova Ficha Mestre</div>
+            <form id="form-cadastro-cardapio" onsubmit="salvarCardapioMestreNaNuvem(event)">
+                
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 20px; align-items: flex-end;">
+                    <div class="campo-grupo">
+                        <label for="car-nome-prato">Nome Oficinal do Cardápio / Prato</label>
+                        <input type="text" id="car-nome-prato" required placeholder="Ex: Galinhada Escolar com Cenoura">
+                    </div>
+                    <div>
+                        <button type="button" class="btn-apple" style="background-color: var(--cinza-texto-secundario); width: 100%; height: 38px;" onclick="adicionarLinhaIngredienteAoFormulario()">
+                            + Adicionar Insumo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Container onde o JS injetará as linhas de ingredientes adicionados -->
+                <div id="container-ingredientes-dinamicos" style="margin-bottom: 20px; padding: 10px 0;">
+                    <!-- Injetado dinamicamente -->
+                </div>
+
+                <div style="display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn-apple" style="background-color: var(--azul-apple); height: 40px; font-weight: 600;">
+                        Homologar Ficha Técnica
+                    </button>
+                </div>
+
+            </form>
+        </div>
+        <!-- ================= LISTAGEM DE FICHAS TÉCNICAS HOMOLOGADAS ================= -->
+        <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; margin-top: 30px;">Cardápios e Fichas Técnicas Cadastradas</h2>
+        <div class="tabela-container">
+            <table class="tabela-mac">
+                <thead>
+                    <tr>
+                        <th>Nome do Cardápio / Prato</th>
+                        <th>Composição Nutricional (Item e Quantidade Base por Aluno)</th>
+                        <th>Porção Base</th>
+                        <th style="text-align: center;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="corpo-tabela-cardapios">
+                    <!-- Injetado dinamicamente via JS -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Scripts de Segurança e Lógica Dinâmica -->
+    <script src="js/autenticador-sessao.js"></script>
+    <script src="js/menu.js"></script>
+    <script src="js/cardapios.js"></script>
+</body>
+</html>
