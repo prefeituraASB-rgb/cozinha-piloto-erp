@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <a href="dashboard.html" class="${paginaAtual === 'dashboard.html' ? 'active' : ''}">📊 Painel Geral</a>
             </li>
             <li>
-                <a href="produtos.html" class="${paginaAtual === 'produtos.html' ? 'active' : ''}">🍎 Cadastrar Itens</a>
+                <a href="produtos.html" class="${paginaAtual === 'entradas.html' ? 'active' : ''}">🍎 Cadastrar Itens</a>
             </li>
             <li>
                 <a href="estoque.html" class="${paginaAtual === 'estoque.html' ? 'active' : ''}">📦 Estoque Atual</a>
