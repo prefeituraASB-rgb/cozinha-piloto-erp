@@ -1,7 +1,7 @@
 /* ==========================================================================
    SCRIPT GLOBAL - CONTROLE DO MENU LATERAL DINÂMICO
    Garante a consistência visual estilo macOS em todas as telas
-   ========================================================================== */
+   ========================================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
     const sidebar = document.getElementById("sidebar");
@@ -29,13 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <a href="dashboard.html" class="${paginaAtual === 'dashboard.html' ? 'active' : ''}">📊 Painel Geral</a>
             </li>
             <li>
-                <a href="entradas.html" class="${paginaAtual === 'produtos.html' ? 'active' : ''}">🍎 Cadastrar Itens</a>
-            </li>
-            <li>
-                <a href="estoque.html" class="${paginaAtual === 'estoque.html' ? 'active' : ''}">📦 Estoque Atual</a>
-            </li>
-            <li>
-                <a href="entradas.html" class="${paginaAtual === 'entradas.html' ? 'active' : ''}">📥 Entrada / Notas</a>
+                <a href="entradas.html" class="${paginaAtual === 'entradas.html' ? 'active' : ''}">🍎 Cadastrar Itens / NF</a>
             </li>
             <li>
                 <a href="saidas.html" class="${paginaAtual === 'saidas.html' ? 'active' : ''}">📤 Saídas / Destinos</a>
