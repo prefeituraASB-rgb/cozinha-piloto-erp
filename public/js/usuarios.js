@@ -1,6 +1,6 @@
 /* ==========================================================================
-   SCRIPT ADMINISTRATIVO - OPERADORES & DESTINOS COM MOTOR DE EDIÇÃO (PUT/DELETE)
-   Grande ERP On-line — Cozinha Piloto de Águas de Santa Bárbara / SP
+   SCRIPT ADMINISTRATIVO - GESTÃO DE OPERADORES & DESTINOS MUNICIPAIS
+   Máscaras puras de RegEx e Motores de Edição (PUT/DELETE)
    ========================================================================== */
 
 let cacheUsuariosLocal = [];
@@ -16,15 +16,17 @@ async function inicializarTelaAdministrativa() {
 }
 
 /**
- * MÁSCARA CORRIGIDA: Formata o CPF (000.000.000-00) na tela sem quebrar strings
+ * MÁSCARA 100% CORRIGIDA: Aplica a formatação nativa de CPF (000.000.000-00) sem travar no final
  */
 function aplicarMascaraCpfUsuario(campo) {
-    let valor = campo.value.replace(/\D/g, "");
+    let valor = campo.value.replace(/\D/g, ""); // Remove tudo que não é número
+
     if (valor.length <= 11) {
         valor = valor.replace(/(\d{3})(\d)/, "\$1.\$2");
         valor = valor.replace(/(\d{3})(\d)/, "\$1.\$2");
-        valor = valor.replace(/(\d{3})(\d{1,2})\$/, "\$1-\$2");
+        valor = valor.replace(/(\d{3})(\d{1,2})\$/, "\$1-\$2"); // Injeta o hífen perfeitamente no bloco final
     }
+
     campo.value = valor;
 }
 
@@ -36,20 +38,18 @@ async function processarCadastroDeUsuario(event) {
 
     const idUsuario = document.getElementById("usr-id").value;
     const cpfFormatado = document.getElementById("usr-cpf").value.trim();
-    
-    // REGRA DE SEGURANÇA: Salva e valida sempre usando o CPF limpo (apenas números)
-    const cpfLimpo = cpfFormatado.replace(/\D/g, "");
+    const cpfLimpo = cpfFormatado.replace(/\D/g, ""); // Base limpa para cruzamento seguro
 
     const payloadUsuario = {
         nome: document.getElementById("usr-nome").value.trim(),
-        cpf: cpfFormatado, // Mantém formatado se preferir, mas a validação cruza dados limpos
+        cpf: cpfFormatado,
         perfil: document.getElementById("usr-perfil").value,
         senha: document.getElementById("usr-senha").value,
         ativo: true
     };
 
     try {
-        // Validação preventiva de duplicidade de CPF (Apenas para novos cadastros)
+        // Validação de duplicidade de CPF (Apenas para novos cadastros)
         if (!idUsuario) {
             const cpfExiste = cacheUsuariosLocal.some(u => u.cpf.replace(/\D/g, "") === cpfLimpo);
             if (cpfExiste) {
@@ -61,7 +61,6 @@ async function processarCadastroDeUsuario(event) {
         let url = '/api/salvar/usuarios';
         let metodo = 'POST';
 
-        // Se houver ID no campo oculto, altera o fluxo para a rota de edição customizada
         if (idUsuario) {
             url = `/api/editar/usuarios/${idUsuario}`;
             metodo = 'PUT';
