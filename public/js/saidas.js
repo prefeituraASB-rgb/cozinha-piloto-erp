@@ -1,6 +1,6 @@
 /* ==========================================================================
-   SCRIPT DE LOGÍSTICA - GESTÃO DE SAÍDAS E DISTRIBUIÇÃO PEPS
-   Controle Híbrido Avançado com Persistência no MongoDB Atlas
+   SCRIPT DE LOGÍSTICA - GESTÃO DE SAÍDAS COM DESTINOS DINÂMICOS
+   Integração de Tabelas Cruzadas e Algoritmo PEPS no MongoDB Atlas
    ========================================================================== */
 
 let cacheLotesDisponiveis = [];
@@ -9,14 +9,18 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarTelaSaidas();
 });
 
+/**
+ * Carrega todas as dependências dinâmicas da nuvem assim que a tela abre
+ */
 async function inicializarTelaSaidas() {
     await carregarLotesNoSeletor();
+    await carregarDestinosMunicipaisNosSeletores();
     await carregarSelectCardapios();
     await carregarHistoricoSaidas();
 }
 
 /**
- * Controla a transição visual das abas estilo macOS
+ * Controla a transição visual das abas operacionais estilo macOS
  */
 function alternarModalidadeSaida(modalidade, botao) {
     document.getElementById("painel-saida-item").style.display = "none";
@@ -32,6 +36,34 @@ function alternarModalidadeSaida(modalidade, botao) {
 }
 
 /**
+ * Puxa os destinos dinâmicos cadastrados na nuvem e alimenta os seletores das duas abas
+ */
+async function carregarDestinosMunicipaisNosSeletores() {
+    const selectItem = document.getElementById("sai-destino");          // Seletor da aba Item a Item
+    const selectCardapio = document.getElementById("sai-cardapio-destino"); // Seletor da aba de Receitas
+    
+    if (!selectItem || !selectCardapio) return;
+
+    try {
+        const res = await fetch('/api/destinos');
+        const destinos = await res.json();
+
+        const opcaoInicial = '<option value="">Selecione o Destino Oficial...</option>';
+        selectItem.innerHTML = opcaoInicial;
+        selectCardapio.innerHTML = opcaoInicial;
+
+        // Alimenta as duas guias com os locais salvos no MongoDB
+        destinos.forEach(d => {
+            const linhaOpcao = `<option value="${d.nome_local}">${d.nome_local}</option>`;
+            selectItem.innerHTML += linhaOpcao;
+            selectCardapio.innerHTML += linhaOpcao;
+        });
+    } catch (e) {
+        console.error("Erro ao carregar destinos dinâmicos na tela de saídas:", e);
+    }
+}
+
+/**
  * Puxa os lotes com saldo ativo do MongoDB e joga no select da tela
  */
 async function carregarLotesNoSeletor() {
@@ -42,7 +74,6 @@ async function carregarLotesNoSeletor() {
         const res = await fetch('/api/entradas');
         const lotes = await res.json();
         
-        // Filtra para exibir apenas lotes que ainda possuem mercadoria em estoque
         cacheLotesDisponiveis = lotes.filter(l => l.quantidade_atual > 0);
 
         select.innerHTML = '<option value="">Selecione o Lote Disponível...</option>';
@@ -63,13 +94,12 @@ function atualizarInformativoMetricaItem(select) {
     const txt = document.getElementById("txt-metrica-item");
     if (!txt || !select.value) return;
     
-    // Procura o lote selecionado para exibir a métrica correta ao operador (Ex: KG, Litros)
     const lote = cacheLotesDisponiveis.find(l => l._id === select.value);
-    txt.innerText = lote ? `(Métrica Base: ${lote.tipo_documento ? 'Unidades/Medida' : 'Insumo'})` : "";
+    txt.innerText = lote ? `(Saldo Real em Estoque)` : "";
 }
 
 /**
- * MODALIDADE A: Processa a baixa isolada Item a Item
+ * MODALIDADE A: Processa a baixa isolada Item a Item para os destinos dinâmicos
  */
 async function processarSaidaItemAItem(event) {
     event.preventDefault();
@@ -79,32 +109,30 @@ async function processarSaidaItemAItem(event) {
     const destino = document.getElementById("sai-destino").value;
     const sessao = JSON.parse(localStorage.getItem("usuarioLogado")) || { nome: "Sistema" };
 
-    if (!loteId) {
-        alert("Selecione um lote válido para realizar a retirada.");
+    if (!loteId || !destino) {
+        alert("Selecione o lote e o destino municipal para homologar a saída.");
         return;
     }
 
-    // Busca o lote real no cache para validar o saldo antes de mandar para a nuvem
     const loteSelecionado = cacheLotesDisponiveis.find(l => l._id === loteId);
     if (qtdRetirar > loteSelecionado.quantidade_atual) {
-        alert(`Saldo Insuficiente! O lote selecionado possui apenas ${loteSelecionado.quantidade_atual} unidades disponíveis.`);
+        alert(`Saldo Insuficiente! O lote possui apenas ${loteSelecionado.quantidade_atual} unidades.`);
         return;
     }
 
     try {
-        // 1. Atualiza o saldo atualizado do lote no banco
-        loteSelecionado.quantidade_atual -= qtdRetirar;
+        loteSelecionado.quantidade_atual = Number((loteSelecionado.quantidade_atual - qtdRetirar).toFixed(4));
         await fetch(`/api/salvar/entradas`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(loteSelecionado)
         });
 
-        // 2. Registra a linha histórica de movimentação na tabela de saídas
         const payloadSaida = {
             entrada_lote_id: loteId,
             nome_produto: loteSelecionado.nome_produto_snapshot,
             quantidade_retirada: qtdRetirar,
+            type_saida: "ITEM A ITEM",
             tipo_saida: "ITEM A ITEM",
             local_envio_destino: destino,
             numero_lote_origem: loteSelecionado.numero_lote,
@@ -117,7 +145,7 @@ async function processarSaidaItemAItem(event) {
             body: JSON.stringify(payloadSaida)
         });
 
-        alert("Baixa física homologada com sucesso no MongoDB Atlas!");
+        alert(`Baixa de ${qtdRetirar} unidades enviada para [${destino}] homologada com sucesso!`);
         document.getElementById("form-saida-item").reset();
         inicializarTelaSaidas();
 
@@ -126,7 +154,7 @@ async function processarSaidaItemAItem(event) {
     }
 }
 /**
- * Alimenta o seletor de receitas homologadas
+ * Alimenta o seletor de receitas homologadas pela Nutricionista
  */
 async function carregarSelectCardapios() {
     const select = document.getElementById("sai-cardapio-id");
@@ -136,7 +164,7 @@ async function carregarSelectCardapios() {
         const res = await fetch('/api/cardapios');
         const cardapios = await res.json();
 
-        select.innerHTML = '<option value="">Selecione o Cardápio...</option>';
+        select.innerHTML = '<option value="">Selecione o Cardápio Homologado...</option>';
         cardapios.forEach(c => {
             select.innerHTML += `<option value="${c._id}">${c.nome_cardapio}</option>`;
         });
@@ -146,7 +174,7 @@ async function carregarSelectCardapios() {
 }
 
 /**
- * MODALIDADE B: Processa o abatimento em massa via Cardápio (Algoritmo PEPS)
+ * MODALIDADE B: Abatimento em Massa via Cardápio Escolar (Algoritmo PEPS Avançado)
  */
 async function processarSaidaPorCardapio(event) {
     event.preventDefault();
@@ -156,38 +184,36 @@ async function processarSaidaPorCardapio(event) {
     const destino = document.getElementById("sai-cardapio-destino").value;
     const sessao = JSON.parse(localStorage.getItem("usuarioLogado")) || { nome: "Sistema" };
 
+    if (!cardapioId || !destino) {
+        alert("Selecione o cardápio e a unidade escolar de destino.");
+        return;
+    }
+
     try {
-        // Busca a ficha do cardápio selecionado na nuvem
         const resCard = await fetch('/api/cardapios');
         const cardapios = await resCard.json();
         const cardapioSelecionado = cardapios.find(c => c._id === cardapioId);
 
-        if (!cardapioSelecionado) return;
-
-        // Puxa todos os lotes atualizados para realizar a varredura PEPS limpa
         const resEntradas = await fetch('/api/entradas');
         let todosLotes = await resEntradas.json();
 
         let itensParaAtualizarNoBanco = [];
         let novasMovimentacoesSaida = [];
 
-        // Varre ingrediente por ingrediente da receita calculando o rombo proporcional
+        // Varre ingrediente por ingrediente calculando a gramatura decimal da receita
         for (let ingrediente of cardapioSelecionado.itens_composicao) {
-            let volumeTotalNecessario = ingrediente.quantidade_por_aluno * totalAlunos;
+            let volumeTotalNecessario = Number((ingrediente.quantidade_por_aluno * totalAlunos).toFixed(4));
 
-            // Filtra e ordena os lotes ativos daquele produto específico por data de vencimento (PEPS)
             let lotesDoItem = todosLotes.filter(l => l.produto_id === ingrediente.produto_id && l.quantidade_atual > 0);
-            lotesDoItem.sort((a, b) => new Date(a.data_validade) - new Date(b.data_validade));
+            lotesDoItem.sort((a, b) => new Date(a.data_validade) - new Date(b.data_validade)); // Ordenação PEPS Real
 
             let saldoTotalDisponivel = lotesDoItem.reduce((acc, l) => acc + l.quantidade_atual, 0);
 
-            // Trava de segurança preventiva
             if (saldoTotalDisponivel < volumeTotalNecessario) {
-                alert(`Erro Crítico! Estoque insuficiente para processar o cardápio inteiro. O item [${ingrediente.nome_produto}] precisa de ${volumeTotalNecessario} unidades, mas o almoxarifado possui apenas ${saldoTotalDisponivel}.`);
+                alert(`Falta de Estoque! O cardápio exige ${volumeTotalNecessario} de [${ingrediente.nome_produto}], mas o saldo total em lotes é de apenas ${saldoTotalDisponivel}.`);
                 return;
             }
 
-            // Executa o abatimento em cascata nos lotes ordenados
             let deficitParaAbater = volumeTotalNecessario;
             for (let lote of lotesDoItem) {
                 if (deficitParaAbater <= 0) break;
@@ -195,12 +221,12 @@ async function processarSaidaPorCardapio(event) {
                 let quantidadeAbatidaNoLote = 0;
                 if (lote.quantidade_atual >= deficitParaAbater) {
                     quantidadeAbatidaNoLote = deficitParaAbater;
-                    lote.quantidade_atual -= deficitParaAbater;
+                    lote.quantidade_atual = Number((lote.quantidade_atual - deficitParaAbater).toFixed(4));
                     deficitParaAbater = 0;
                 } else {
                     quantidadeAbatidaNoLote = lote.quantidade_atual;
-                    deficitParaAbater -= lote.quantidade_atual;
-                    lote.quantidade_atual = 0; // Zera o lote mais antigo e pula pro próximo
+                    deficitParaAbater = Number((deficitParaAbater - lote.quantidade_atual).toFixed(4));
+                    lote.quantidade_atual = 0;
                 }
 
                 itensParaAtualizarNoBanco.push(lote);
@@ -217,12 +243,12 @@ async function processarSaidaPorCardapio(event) {
             }
         }
 
-        // Se toda a cadeia de ingredientes passou no teste de saldo, grava tudo em massa na nuvem
-        for (let loteAtualizado of itensParaAtualizarNoBanco) {
+        // Commita as alterações em massa no MongoDB se o estoque inteiro passou na validação
+        for (let loteUpd of itensParaAtualizarNoBanco) {
             await fetch('/api/salvar/entradas', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(loteAtualizado)
+                body: JSON.stringify(loteUpd)
             });
         }
 
@@ -234,7 +260,7 @@ async function processarSaidaPorCardapio(event) {
             });
         }
 
-        alert(`Sucesso! O cardápio [${cardapioSelecionado.nome_cardapio}] foi processado. Foram abatidos os insumos para as ${totalAlunos} crianças.`);
+        alert(`Sucesso Contábil! Cardápio [${cardapioSelecionado.nome_cardapio}] abatido para os destinos dinâmicos.`);
         document.getElementById("form-saida-cardapio").reset();
         inicializarTelaSaidas();
 
@@ -264,7 +290,7 @@ async function carregarHistoricoSaidas() {
         baixas.forEach(mov => {
             const dataHora = new Date(mov.createdAt).toLocaleString('pt-BR');
             const identificadorBaixa = mov.tipo_saida === "RECEITA" 
-                ? `<span class="badge-mac badge-verde">🍱 CARDÁPIO</span><br><small style="color:var(--cinza-texto-secundario)">${mov.nome_cardapio}</small>`
+                ? `<span class="badge-mac badge-verde">🍱 CARDÁPIO</span><br><small style="color:var(--cinza-texto-secundario)">${mov.nome_cardapio || 'Receita'}</small>`
                 : `<span class="badge-mac badge-laranja">📦 AVULSA</span>`;
 
             const tr = document.createElement("tr");

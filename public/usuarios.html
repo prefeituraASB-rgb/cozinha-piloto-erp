@@ -61,9 +61,10 @@
                 </div>
             </form>
         </div>
+
         <!-- ================= LISTAGEM DE USUÁRIOS ATIVOS E OPERACIONAIS ================= -->
         <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; margin-top: 30px;">Equipe de Operadores Credenciados</h2>
-        <div class="tabela-container">
+        <div class="tabela-container" style="margin-bottom: 40px;">
             <table class="tabela-mac">
                 <thead>
                     <tr>
@@ -74,6 +75,42 @@
                     </tr>
                 </thead>
                 <tbody id="corpo-tabela-usuarios">
+                    <!-- Injetado dinamicamente via JS -->
+                </tbody>
+            </table>
+        </div>
+        <!-- ================= 🏢 NOVO MODULO: GESTÃO DE DESTINOS DO MUNICÍPIO ================= -->
+        <div class="painel-operacional">
+            <div class="painel-titulo">🏢 Cadastrar Nova Escola, Unidade ou Destino Consumo</div>
+            <form id="form-cadastro-destino" onsubmit="processarCadastroDeDestino(event)">
+                <div class="grid-formulario" style="align-items: flex-end;">
+                    
+                    <div class="campo-grupo" style="flex: 2;">
+                        <label for="des-nome">Nome da Unidade / Setor de Destino</label>
+                        <input type="text" id="des-nome" required placeholder="Ex: EMEB Prefeito Jair Gilbert Carniato ou Consumo Interno">
+                    </div>
+
+                    <div class="campo-grupo">
+                        <button type="submit" class="btn-apple" style="height: 38px; background-color: var(--verde-apple);">
+                            Homologar Local de Envio
+                        </button>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+
+        <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; margin-top: 30px;">Destinos Oficiais de Insumos Cadastrados</h2>
+        <div class="tabela-container">
+            <table class="tabela-mac">
+                <thead>
+                    <tr>
+                        <th>Nome do Local / Escola Beneficiada</th>
+                        <th>Identificador de Auditoria</th>
+                        <th style="text-align: center;">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="corpo-tabela-destinos">
                     <!-- Injetado dinamicamente via JS -->
                 </tbody>
             </table>
