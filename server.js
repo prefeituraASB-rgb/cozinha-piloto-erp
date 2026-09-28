@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 8000;
 app.use(express.json());
 app.use(express.static('public'));
 
-// 🚀 CORREÇÃO DE ENGENHARIA (Steve Jobs UX): Redireciona a raiz "/" automaticamente para a tela de login
+// 🚀 Redireciona a raiz "/" automaticamente para a tela de login
 app.get('/', (req, res) => {
     res.redirect('/index.html');
 });
@@ -54,7 +54,6 @@ const EntradaSchema = new mongoose.Schema({
     numero_lote: { type: String, required: true },
     usuario_responsavel: { type: String, required: true }
 }, { timestamps: true });
-
 // 4. Tabela: Saídas e Distribuição Híbrida (Item a Item ou por Cardápio)
 const SaidaSchema = new mongoose.Schema({
     entrada_lote_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Entrada', required: true },
@@ -86,6 +85,11 @@ const QuebraSchema = new mongoose.Schema({
     usuario_responsavel: { type: String, required: true }
 }, { timestamps: true });
 
+// 🏢 EXCLUSIVO: 7. Tabela de Destinos Dinâmicos Cadastrados pela Nutricionista
+const DestinoSchema = new mongoose.Schema({
+    nome_local: { type: String, required: true, unique: true }
+}, { timestamps: true });
+
 // Instanciação dos Modelos Operacionais do Mongoose
 const Usuario = mongoose.model('Usuario', UsuarioSchema);
 const Produto = mongoose.model('Produto', ProdutoSchema);
@@ -93,7 +97,7 @@ const Entrada = mongoose.model('Entrada', EntradaSchema);
 const Saida = mongoose.model('Saida', SaidaSchema);
 const Cardapio = mongoose.model('Cardapio', CardapioSchema);
 const Quebra = mongoose.model('Quebra', QuebraSchema);
-
+const Destino = mongoose.model('Destino', DestinoSchema);
 // ==========================================================================
 // 🛣️ ROTAS UNIVERSAIS DA API (ENDPOINTS SEGUROS PARA AS TELAS CONSUMIREM)
 // ==========================================================================
@@ -110,6 +114,7 @@ app.get('/api/:tabela', async (req, res) => {
         if (tabela === 'saidas') colecao = await Saida.find().sort({ createdAt: -1 });
         if (tabela === 'cardapios') colecao = await Cardapio.find();
         if (tabela === 'quebras') colecao = await Quebra.find().sort({ createdAt: -1 });
+        if (tabela === 'destinos') colecao = await Destino.find().sort({ nome_local: 1 });
         
         res.json(colecao);
     } catch (e) {
@@ -129,10 +134,46 @@ app.post('/api/salvar/:tabela', async (req, res) => {
         if (tabela === 'saidas') novoItem = await new Saida(req.body).save();
         if (tabela === 'cardapios') novoItem = await new Cardapio(req.body).save();
         if (tabela === 'quebras') novoItem = await new Quebra(req.body).save();
+        if (tabela === 'destinos') novoItem = await new Destino(req.body).save();
         
         res.json({ sucesso: true, id: novoItem._id });
     } catch (e) {
         res.status(500).json({ erro: `Falha ao processar inserção na tabela: ${req.params.tabela}` });
+    }
+});
+
+// ✏️ NOVA ROTA: Edição e Atualização Customizada de Registros (PUT)
+app.put('/api/editar/:tabela/:id', async (req, res) => {
+    try {
+        const { tabela, id } = req.params;
+        let atualizado;
+
+        if (tabela === 'usuarios') {
+            atualizado = await Usuario.findByIdAndUpdate(id, req.body, { new: true });
+        } else if (tabela === 'destinos') {
+            atualizado = await Destino.findByIdAndUpdate(id, req.body, { new: true });
+        }
+
+        if (!atualizado) return res.status(404).json({ erro: "Registro não localizado no banco." });
+        res.json({ sucesso: true, item: atualizado });
+    } catch (e) {
+        res.status(500).json({ erro: `Erro ao atualizar dados na tabela ${req.params.tabela}` });
+    }
+});
+
+// 🚨 NOVA ROTA: Exclusão Permanente de Registros na Nuvem (DELETE)
+app.delete('/api/deletar/:tabela/:id', async (req, res) => {
+    try {
+        const { tabela, id } = req.params;
+        let removido;
+
+        if (tabela === 'usuarios') removido = await Usuario.findByIdAndDelete(id);
+        if (tabela === 'destinos') removido = await Destino.findByIdAndDelete(id);
+
+        if (!removido) return res.status(404).json({ erro: "Registro não encontrado para exclusão." });
+        res.json({ sucesso: true });
+    } catch (e) {
+        res.status(500).json({ erro: `Erro ao deletar registro na tabela ${req.params.tabela}` });
     }
 });
 
