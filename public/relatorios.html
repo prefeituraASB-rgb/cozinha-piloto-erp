@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prestação de Contas - ERP Cozinha Piloto</title>
+    <!-- Importação das folhas de estilo unificadas do ecossistema -->
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/operacoes.css">
+    <style>
+        .topo-relatorio {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .btn-excel {
+            background-color: #107c41 !important; /* Verde Oficial do Microsoft Excel */
+            box-shadow: 0 4px 12px rgba(16, 124, 65, 0.2);
+        }
+        .btn-excel:hover {
+            background-color: #0b592e !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Translúcida macOS Injetada via JS -->
+    <aside id="sidebar" class="sidebar"></aside>
+
+    <!-- Conteúdo Principal à direita do menu fixo -->
+    <main class="main-content">
+        <header class="page-header">
+            <div>
+                <h1>Prestação de Contas & Relatórios Fiscais</h1>
+                <p>Audite a movimentação contábil do estoque central, filtre históricos de lotes e exporte relatórios para controle da prefeitura.</p>
+            </div>
+        </header>
+
+        <!-- 🔄 Abas Superiores para Seleção do Tipo de Relatório (Steve Jobs UX) -->
+        <nav class="abas-navegacao">
+            <button class="aba-item ativa" onclick="alternarTipoRelatorio('entradas', this)">📥 Relatório de Entradas / NF</button>
+            <button class="aba-item" onclick="alternarTipoRelatorio('saidas', this)">📤 Relatório de Saídas / Consumo</button>
+            <button class="aba-item" onclick="alternarTipoRelatorio('quebras', this)">⚠️ Relatório de Perdas / Avarias</button>
+        </nav>
+
+        <!-- Container Operacional de Filtros Globais -->
+        <div class="painel-operacional">
+            <div class="painel-titulo">🔍 Filtros de Auditoria Contábil</div>
+            <div class="grid-formulario">
+                <div class="campo-grupo">
+                    <label for="filtro-busca">Pesquisar por Item ou Documento (NF)</label>
+                    <input type="text" id="filtro-busca" oninput="executarFiltroCruzadoNaTela()" placeholder="Digite o produto ou número da nota...">
+                </div>
+                <div class="campo-grupo">
+                    <label for="filtro-data-inicio">Data Inicial</label>
+                    <input type="date" id="filtro-data-inicio" onchange="executarFiltroCruzadoNaTela()">
+                </div>
+                <div class="campo-grupo">
+                    <label for="filtro-data-fim">Data Final</label>
+                    <input type="date" id="filtro-data-fim" onchange="executarFiltroCruzadoNaTela()">
+                </div>
+            </div>
+        </div>
+        <!-- Container de Resultados com Botão de Exportação Premium -->
+        <div class="painel-operacional">
+            <div class="topo-relatorio">
+                <div class="painel-titulo" id="titulo-tabela-relatorio">📋 Dados de Entradas e Notas Auditadas</div>
+                <button class="btn-apple btn-excel" onclick="exportarRelatorioAtualParaExcel()">
+                    💚 Exportar para o Excel (.xls)
+                </button>
+            </div>
+
+            <!-- Tabela Dinâmica coringa que se adapta ao relatório selecionado -->
+            <div class="tabela-container">
+                <table class="tabela-mac" id="tabela-relatorio-fiscal">
+                    <thead id="cabecalho-tabela-relatorio">
+                        <!-- Injetado dinamicamente via JS -->
+                    </thead>
+                    <tbody id="corpo-tabela-relatorio">
+                        <!-- Injetado dinamicamente via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts de Segurança e Inteligência de Exportação -->
+    <script src="js/autenticador-sessao.js"></script>
+    <script src="js/menu.js"></script>
+    <script src="js/relatorios.js"></script>
+</body>
+</html>
