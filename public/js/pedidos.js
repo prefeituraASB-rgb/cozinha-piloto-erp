@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SCRIPT DE LOGÍSTICA - REQUISIÇÕES & BALANÇA LADO A LADO (COMPRAS)
+   SCRIPT DE LOGÍSTICA - REQUISIÇÕES & BALANÇA LADO A LADO COM MOTOR DE RECUSA
    Controle Comparativo e Entrada Automatizada de Estoque no Mongo Atlas
    ========================================================================== */
 
@@ -77,7 +77,6 @@ function removerLinhaDoGridPedido(idLinha) {
     }
     document.getElementById(idLinha).remove();
 }
-
 /**
  * Salva a requisição estruturada na nuvem
  */
@@ -91,6 +90,7 @@ async function salvarPedidoDeCompraNaNuvem(event) {
     const itensPedido = [];
     linhasDoGrid.forEach(linha => {
         itensPedido.push({
+            nome: inline.querySelector(".ped-item-nome").value.trim(),
             nome: linha.querySelector(".ped-item-nome").value.trim(),
             quantidade: Number(linha.querySelector(".ped-item-qtd").value),
             unidade: linha.querySelector(".ped-item-medida").value
@@ -103,6 +103,7 @@ async function salvarPedidoDeCompraNaNuvem(event) {
         destinatario: adminDestino,
         itens: itensPedido,
         status: "PENDENTE",
+        justificativa_recusa: "", // Nasce limpo esperando auditoria
         createdAt: new Date().toISOString()
     };
 
@@ -142,10 +143,17 @@ async function carregarHistoricoPedidos() {
             const dataHora = new Date(ped.createdAt).toLocaleString('pt-BR');
             const resumoItensHtml = ped.itens.map(i => `<span class="badge-mac badge-cinza" style="margin-right:4px; margin-bottom:4px; display:inline-flex;">${i.nome}: <strong>${i.quantidade} ${i.unidade}</strong></span>`).join('');
             
-            let classeStatus = ped.status === 'RECEBIDO' ? 'badge-verde' : 'badge-laranja';
+            let classeStatus = 'badge-laranja';
+            let detalheRecusaHtml = "";
             let acaoBotaoHtml = `<span style="color:var(--verde-apple); font-weight:600;">Homologado ✅</span>`;
             
-            if (ped.status === 'PENDENTE') {
+            if (ped.status === 'RECEBIDO') {
+                classeStatus = 'badge-verde';
+            } else if (ped.status === 'RECUSADO') {
+                classeStatus = 'badge-vermelho';
+                acaoBotaoHtml = `<span style="color:var(--vermelho-apple); font-weight:600;">Negado ❌</span>`;
+                detalheRecusaHtml = `<br><small style="color:var(--vermelho-apple); font-weight:500;">💬 Motivo: ${ped.justificativa_recusa || 'Não informada'}</small>`;
+            } else if (ped.status === 'PENDENTE') {
                 acaoBotaoHtml = `<button class="btn-apple" style="padding: 5px 12px; font-size: 0.8rem; background-color: var(--azul-apple);" onclick="abrirJanelaConferenciaLadoALado('${ped._id}')">Conferir & Receber</button>`;
             }
 
@@ -153,7 +161,7 @@ async function carregarHistoricoPedidos() {
             tr.innerHTML = `
                 <td><strong>${ped.codigo_pedido}</strong><br><small>${dataHora}</small></td>
                 <td><small>Por:</small> <strong>${ped.solicitante}</strong><br><small>Para: ${ped.destinatario}</small></td>
-                <td>${resumoItensHtml}</td>
+                <td>${resumoItensHtml}${detalheRecusaHtml}</td>
                 <td><span class="badge-mac ${classeStatus}">${ped.status}</span></td>
                 <td style="text-align: center;">${acaoBotaoHtml}</td>
             `;
@@ -161,15 +169,11 @@ async function carregarHistoricoPedidos() {
         });
     } catch (e) { console.error(e); }
 }
-/**
- * Abre e monta a interface Split-Screen (Solicitado vs Atendido) carregando dados reais
- */
 function abrirJanelaConferenciaLadoALado(idPedido) {
     const sessao = JSON.parse(localStorage.getItem("usuarioLogado")) || { perfil: "OPERADOR" };
 
-    // 🔒 TRAVA DE PERFIL EXIGIDA: Barra o recebimento por usuários comuns
     if (sessao.perfil !== 'ADMINISTRADOR') {
-        alert(`🚨 ACESSO BLOQUEADO!\n\nO seu perfil está configurado como [${sessao.perfil}]. A conferência e o recebimento de pedidos de compra são de competência exclusiva de usuários ADMINISTRADORES.`);
+        alert(`🚨 ACESSO BLOQUEADO!\n\nA conferência e o recebimento de pedidos de compra são de competência exclusiva de usuários ADMINISTRADORES.`);
         return;
     }
 
@@ -185,16 +189,13 @@ function abrirJanelaConferenciaLadoALado(idPedido) {
     colSolicitado.innerHTML = "";
     colAtendido.innerHTML = "";
 
-    // Reconstrói as duas colunas em sincronia paralela perfeita
-    ped.itens.forEach((item, index) => {
-        // Coluna Esquerda: Estática (Pedido Original)
+    ped.itens.forEach((item) => {
         colSolicitado.innerHTML += `
             <div style="height: 38px; display:flex; align-items:center; font-size:0.9rem;">
                 📌 <strong>${item.nome}</strong>: &nbsp;<span style="color:var(--azul-apple); font-weight:700;">${item.quantidade} ${item.unidade}</span>
             </div>
         `;
 
-        // Coluna Direita: Editável (O que será atendido)
         colAtendido.innerHTML += `
             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; align-items: center;" class="linha-atendimento-controle">
                 <input type="text" class="conf-item-nome-f" value="${item.nome}" readonly style="background: rgba(0,0,0,0.02); height: 38px;">
@@ -203,11 +204,8 @@ function abrirJanelaConferenciaLadoALado(idPedido) {
         `;
     });
 
-    // Injeta a data atual padrão de fábrica no campo de validade para facilitar
     document.getElementById("conf-validade-data").value = new Date().toISOString().split('T')[0];
     document.getElementById("painel-conferencia-pedido").style.display = "block";
-    
-    // Rola suavemente a tela do navegador para focar na janela de conferência
     document.getElementById("painel-conferencia-pedido").scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -215,17 +213,48 @@ function fecharJanelaConferenciaLadoAlado() {
     document.getElementById("painel-conferencia-pedido").style.display = "none";
 }
 
-/**
- * HOMOLOGAÇÃO LADO A LADO: Consolida as alterações e injeta lotes automaticamente no estoque real
- */
+async function negarPedidoDeCompraComJustificativa() {
+    const idPedido = document.getElementById("conf-pedido-id-oculto").value;
+    const pedidoReal = cachePedidosLocal.find(p => p._id === idPedido);
+
+    if (!pedidoReal) return;
+
+    const motivo = prompt(`🛑 RECUSA DO PEDIDO ${pedidoReal.codigo_pedido}\n\nPor favor, digite uma justificativa clara sobre o motivo da recusa para o solicitante:`);
+
+    if (motivo === null) return; 
+    if (motivo.trim() === "") {
+        alert("Erro! É obrigatório informar uma justificativa legal para negar o pedido de compras.");
+        return;
+    }
+
+    try {
+        pedidoReal.status = "RECUSADO";
+        pedidoReal.justificativa_recusa = motivo.trim();
+
+        const res = await fetch('/api/salvar/pedidos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(pedidoReal)
+        });
+
+        if (res.ok) {
+            alert(`Sucesso! O Pedido ${pedidoReal.codigo_pedido} foi rejeitado e a justificativa foi fixada no relatório.`);
+            fecharJanelaConferenciaLadoAlado();
+            await inicializarModuloPedidos();
+        } else {
+            alert("Erro ao salvar atualização de recusa na nuvem.");
+        }
+    } catch (e) { console.error(e); }
+}
+
 async function salvarHomologacaoLadoALadoNaNuvem() {
     const idPedido = document.getElementById("conf-pedido-id-oculto").value;
     const nfNumero = document.getElementById("conf-nf-numero").value.trim();
     const loteNumero = document.getElementById("conf-lote-numero").value.trim();
-    const dataValidade = document.getElementById("conf-validade-data").value;
-    const estoqueMinimo = Number(document.getElementById("conf-minimo-qtd").value);
+    const dataValid = document.getElementById("conf-validade-data").value;
+    const estoqueMin = Number(document.getElementById("conf-minimo-qtd").value);
 
-    if (!nfNumero || !loteNumero || !dataValidade || !estoqueMinimo) {
+    if (!nfNumero || !loteNumero || !dataValid || !estoqueMin) {
         alert("Preencha todos os metadados fiscais da carga (Nota, Lote, Validade e Estoque Mínimo).");
         return;
     }
@@ -234,21 +263,18 @@ async function salvarHomologacaoLadoALadoNaNuvem() {
     const linhasAtendidas = document.querySelectorAll(".linha-atendimento-controle");
     const sessao = JSON.parse(localStorage.getItem("usuarioLogado")) || { nome: "Nutricionista" };
 
-    if (!confirm("Confirmar a homologação contábil? Todos os itens listados serão injetados de forma imediata como lotes operacionais no estoque.")) {
+    if (!confirm("Confirmar a homologação contábil? Todos os itens listados serão injetados como lotes operacionais no estoque.")) {
         return;
     }
 
     try {
-        // 1. Processa item por item da coluna da direita (Atendido) para alimentar o estoque
         for (let linha of linhasAtendidas) {
             const nomeInsumo = linha.querySelector(".conf-item-nome-f").value;
             const qtdEntregue = Number(linha.querySelector(".conf-item-qtd-f").value);
             const metricaInsumo = linha.querySelector(".conf-item-qtd-f").getAttribute("data-medida");
 
-            // Ignora o item caso o fornecedor tenha cortado o produto da entrega (quantidade zerada)
             if (qtdEntregue <= 0) continue;
 
-            // Invoca a mesma inteligência do fluxo de entradas para salvar/criar produtos e lotes na nuvem
             const resProd = await fetch('/api/produtos');
             const produtos = await resProd.json();
             
@@ -256,13 +282,12 @@ async function salvarHomologacaoLadoALadoNaNuvem() {
             let produtoId = prodExistente ? prodExistente._id : null;
 
             if (!prodExistente) {
-                // Cria o produto no catálogo geral de forma oculta e automática
                 const novoProdRes = await fetch('/api/salvar/produtos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         nome_produto: nomeInsumo,
-                        categoria_item: "Insumo Alimentar", // Categoria padrão adaptável
+                        categoria_item: "Insumo Alimentar",
                         metrica_base: metricaInsumo === "LATAS" || metricaInsumo === "GALÕES" || metricaInsumo === "FARDO" || metricaInsumo === "CAIXA" || metricaInsumo === "PACOTE" ? "OUTRAS" : metricaInsumo
                     })
                 });
@@ -270,7 +295,6 @@ async function salvarHomologacaoLadoALadoNaNuvem() {
                 produtoId = resultadoNovoProd.id;
             }
 
-            // Constrói o lote com saldo operacional cheio e vincula ao ID do produto
             const payloadLoteAutomático = {
                 produto_id: produtoId,
                 nome_produto_snapshot: nomeInsumo,
@@ -278,8 +302,8 @@ async function salvarHomologacaoLadoALadoNaNuvem() {
                 quantidade_atual: qtdEntregue, 
                 tipo_documento: "NOTA FISCAL",
                 numero_documento: nfNumero,
-                estoque_minimo: estoqueMinimo,
-                data_validade: new Date(dataValidade).toISOString(),
+                estoque_minimo: estoqueMin,
+                data_validade: new Date(dataValid).toISOString(),
                 numero_lote: loteNumero,
                 usuario_responsavel: sessao.nome
             };
@@ -291,7 +315,6 @@ async function salvarHomologacaoLadoALadoNaNuvem() {
             });
         }
 
-        // 2. Altera o status da requisição de PENDENTE para RECEBIDO e atualiza a nuvem
         pedidoReal.status = "RECEBIDO";
         await fetch('/api/salvar/pedidos', {
             method: 'POST',
@@ -299,12 +322,12 @@ async function salvarHomologacaoLadoALadoNaNuvem() {
             body: JSON.stringify(pedidoReal)
         });
 
-        alert("Homologação concluída com sucesso! Os lotes de mercadoria já estão ativos nas prateleiras virtuais.");
+        alert("Homologação concluída com sucesso! Os lotes de mercadoria já estão ativos nas prateleiras.");
         fecharJanelaConferenciaLadoAlado();
         await inicializarModuloPedidos();
 
     } catch (e) {
-        console.error("Erro na automação do split-screen contábil:", e);
+        console.error(e);
         alert("Falha de rede ao tentar injetar a carga no estoque.");
     }
 }

@@ -19,6 +19,10 @@
             from { opacity: 0; transform: scale(0.98) translateY(5px); }
             to { opacity: 1; transform: scale(1) translateY(0); }
         }
+        .badge-vermelho {
+            background: rgba(255, 59, 48, 0.1) !important;
+            color: var(--vermelho-apple) !important;
+        }
     </style>
 </head>
 <body>
@@ -30,7 +34,7 @@
         <header class="page-header">
             <div>
                 <h1>Requisições & Pedidos de Compra</h1>
-                <p>Solicite a aquisição de novos suprimentos. Administradores realizam a conferência visual e o recebimento fiscal lado a lado.</p>
+                <p>Solicite a aquisição de novos suprimentos. Administradores realizam a conferência visual, o recebimento fiscal ou a recusa com justificativa.</p>
             </div>
         </header>
 
@@ -83,7 +87,7 @@
                 </tbody>
             </table>
         </div>
-        <!-- ================= PANEL DE CONFERÊNCIA FISCAL LADO A LADO ================= -->
+        <!-- ================= PAINEL DE CONFERÊNCIA FISCAL LADO A LADO ================= -->
         <div id="painel-conferencia-pedido" class="painel-operacional" style="display: none; border: 2px solid var(--azul-apple);">
             <div class="painel-titulo" style="color: var(--azul-apple); justify-content: space-between; display: flex; width: 100%;">
                 <span>⚖️ Conferência Fiscal: Pedido <span id="conf-codigo-titulo">---</span></span>
@@ -111,19 +115,19 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.05);">
                         <div class="campo-grupo">
                             <label style="font-size: 0.75rem;">Nº da Nota Fiscal</label>
-                            <input type="text" id="conf-nf-numero" required placeholder="Ex: NF-2026">
+                            <input type="text" id="conf-nf-numero" placeholder="Ex: NF-2026">
                         </div>
                         <div class="campo-grupo">
                             <label style="font-size: 0.75rem;">Nº do Lote de Entrada</label>
-                            <input type="text" id="conf-lote-numero" required placeholder="Ex: LOTE-A">
+                            <input type="text" id="conf-lote-numero" placeholder="Ex: LOTE-A">
                         </div>
                         <div class="campo-grupo">
                             <label style="font-size: 0.75rem;">Data de Validade</label>
-                            <input type="date" id="conf-validade-data" required>
+                            <input type="date" id="conf-validade-data">
                         </div>
                         <div class="campo-grupo">
                             <label style="font-size: 0.75rem;">Estoque Mínimo Alerta</label>
-                            <input type="number" id="conf-minimo-qtd" required placeholder="Ex: 10">
+                            <input type="number" id="conf-minimo-qtd" placeholder="Ex: 10">
                         </div>
                     </div>
 
@@ -133,7 +137,11 @@
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; margin-top: 25px; padding-top: 15px; border-top: 1px solid rgba(0,0,0,0.05);">
+            <!-- Botões Inferiores Ajustados: Negar Esquerda e Homologar Direita -->
+            <div style="display: flex; justify-content: space-between; margin-top: 25px; padding-top: 15px; border-top: 1px solid rgba(0,0,0,0.05);">
+                <button type="button" class="btn-apple" style="background-color: var(--vermelho-apple); height: 40px; font-weight: 600;" onclick="negarPedidoDeCompraComJustificativa()">
+                    🛑 Negar / Recusar Pedido
+                </button>
                 <button type="button" class="btn-apple" style="background-color: var(--verde-apple); height: 40px; font-weight: 600;" onclick="salvarHomologacaoLadoALadoNaNuvem()">
                     Homologar e Injetar no Estoque Real ✅
                 </button>
