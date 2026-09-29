@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 8000;
 app.use(express.json());
 app.use(express.static('public'));
 
-// 🚀 Redireciona a raiz "/" automaticamente para a tela de login
+// Redireciona a raiz "/" automaticamente para a tela de login
 app.get('/', (req, res) => {
     res.redirect('/index.html');
 });
@@ -34,14 +34,14 @@ const UsuarioSchema = new mongoose.Schema({
     ativo: { type: Boolean, default: true }
 }, { timestamps: true });
 
-// 2. Tabela: Catálogo de Produtos Unificado (Merenda + Materiais + Utensílios)
+// 2. Tabela: Catálogo de Produtos Unificado
 const ProdutoSchema = new mongoose.Schema({
     nome_produto: { type: String, required: true, unique: true },
     categoria_item: { type: String, enum: ['Insumo Alimentar', 'Material de Consumo', 'Utensílio/Bem Durável'], required: true },
     metrica_base: { type: String, enum: ['KG', 'UNIDADE', 'LITROS', 'OUTRAS'], required: true }
 }, { timestamps: true });
 
-// 3. Tabela: Lotes e Entradas Avançadas (Dupla Modalidade: Nota Fiscal ou Individual)
+// 3. Tabela: Lotes e Entradas Avançadas
 const EntradaSchema = new mongoose.Schema({
     produto_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Produto', required: true },
     nome_produto_snapshot: { type: String, required: true }, 
@@ -54,7 +54,7 @@ const EntradaSchema = new mongoose.Schema({
     numero_lote: { type: String, required: true },
     usuario_responsavel: { type: String, required: true }
 }, { timestamps: true });
-// 4. Tabela: Saídas e Distribuição Híbrida (Item a Item ou por Cardápio)
+// 4. Tabela: Saídas e Distribuição Híbrida
 const SaidaSchema = new mongoose.Schema({
     entrada_lote_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Entrada', required: true },
     nome_produto: { type: String, required: true },
@@ -76,7 +76,7 @@ const CardapioSchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
-// 6. Tabela: Módulo de Quebras, Avarias e Consumo de Bens
+// 6. Tabela: Módulo de Quebras, Avarias e Perdas
 const QuebraSchema = new mongoose.Schema({
     nome_produto: { type: String, required: true },
     numero_lote: { type: String, required: true },
@@ -85,7 +85,7 @@ const QuebraSchema = new mongoose.Schema({
     usuario_responsavel: { type: String, required: true }
 }, { timestamps: true });
 
-// 7. Tabela de Destinos Dinâmicos Cadastrados pela Nutricionista
+// 7. Tabela de Destinos Dinâmicos
 const DestinoSchema = new mongoose.Schema({
     nome_local: { type: String, required: true, unique: true }
 }, { timestamps: true });
@@ -116,7 +116,6 @@ app.get('/api/:tabela', async (req, res) => {
         if (tabela === 'quebras') colecao = await Quebra.find().sort({ createdAt: -1 });
         if (tabela === 'destinos') colecao = await Destino.find().sort({ nome_local: 1 });
         
-        // 🚀 Suporte nativo para a leitura do histórico do Grid de Compras
         if (tabela === 'pedidos') {
             colecao = await mongoose.connection.db.collection('pedidos').find().toArray();
         }
@@ -141,7 +140,6 @@ app.post('/api/salvar/:tabela', async (req, res) => {
         if (tabela === 'quebras') novoItem = await new Quebra(req.body).save();
         if (tabela === 'destinos') novoItem = await new Destino(req.body).save();
         
-        // 🚀 Suporte nativo para gravação e fechamento do Grid de compras na nuvem
         if (tabela === 'pedidos') {
             const idEdicao = req.body._id;
             if (idEdicao) {
@@ -163,26 +161,26 @@ app.post('/api/salvar/:tabela', async (req, res) => {
     }
 });
 
-// ✏️ ROTA: Edição e Atualização Customizada de Registros (PUT)
+// Rota: Edição e Atualização Customizada de Registros (PUT)
 app.put('/api/editar/:tabela/:id', async (req, res) => {
     try {
         const { tabela, id } = req.params;
-        let atualizado;
+        let updated;
 
         if (tabela === 'usuarios') {
-            atualizado = await Usuario.findByIdAndUpdate(id, req.body, { new: true });
+            updated = await Usuario.findByIdAndUpdate(id, req.body, { new: true });
         } else if (tabela === 'destinos') {
-            atualizado = await Destino.findByIdAndUpdate(id, req.body, { new: true });
+            updated = await Destino.findByIdAndUpdate(id, req.body, { new: true });
         }
 
-        if (!atualizado) return res.status(404).json({ erro: "Registro não localizado no banco." });
-        res.json({ sucesso: true, item: atualizado });
+        if (!updated) return res.status(404).json({ erro: "Registro não localizado no banco." });
+        res.json({ sucesso: true, item: updated });
     } catch (e) {
         res.status(500).json({ erro: `Erro ao atualizar dados na tabela ${req.params.tabela}` });
     }
 });
 
-// 🚨 ROTA: Exclusão Permanente de Registros na Nuvem (DELETE)
+// Rota: Exclusão Permanente de Registros na Nuvem (DELETE)
 app.delete('/api/deletar/:tabela/:id', async (req, res) => {
     try {
         const { tabela, id } = req.params;
