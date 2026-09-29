@@ -1,6 +1,6 @@
 /* ==========================================================================
    SCRIPT ADMINISTRATIVO - GESTÃO DE OPERADORES & DESTINOS MUNICIPAIS
-   Máscaras puras de RegEx e Motores de Edição (PUT/DELETE)
+   Máscara Simplificada Direta e Motores de Edição (PUT/DELETE)
    ========================================================================== */
 
 let cacheUsuariosLocal = [];
@@ -16,18 +16,25 @@ async function inicializarTelaAdministrativa() {
 }
 
 /**
- * MÁSCARA 100% CORRIGIDA: Aplica a formatação nativa de CPF (000.000.000-00) sem travar no final
+ * MÁSCARA BLINDADA: Reconstrói a string do CPF caractere por caractere para evitar conflitos de RegEx
  */
 function aplicarMascaraCpfUsuario(campo) {
-    let valor = campo.value.replace(/\D/g, ""); // Remove tudo que não é número
+    // Remove qualquer caractere que não seja número
+    let v = campo.value.replace(/\D/g, ""); 
+    
+    // Corta a string para garantir que não passe de 11 dígitos numéricos
+    if (v.length > 11) v = v.substring(0, 11);
 
-    if (valor.length <= 11) {
-        valor = valor.replace(/(\d{3})(\d)/, "\$1.\$2");
-        valor = valor.replace(/(\d{3})(\d)/, "\$1.\$2");
-        valor = valor.replace(/(\d{3})(\d{1,2})\$/, "\$1-\$2"); // Injeta o hífen perfeitamente no bloco final
+    // Remonta a string injetando a pontuação com base no comprimento atual
+    if (v.length > 9) {
+        campo.value = v.substring(0, 3) + "." + v.substring(3, 6) + "." + v.substring(6, 9) + "-" + v.substring(9);
+    } else if (v.length > 6) {
+        campo.value = v.substring(0, 3) + "." + v.substring(3, 6) + "." + v.substring(6);
+    } else if (v.length > 3) {
+        campo.value = v.substring(0, 3) + "." + v.substring(3);
+    } else {
+        campo.value = v;
     }
-
-    campo.value = valor;
 }
 
 /**
@@ -38,7 +45,13 @@ async function processarCadastroDeUsuario(event) {
 
     const idUsuario = document.getElementById("usr-id").value;
     const cpfFormatado = document.getElementById("usr-cpf").value.trim();
-    const cpfLimpo = cpfFormatado.replace(/\D/g, ""); // Base limpa para cruzamento seguro
+    const cpfLimpo = cpfFormatado.replace(/\D/g, ""); 
+
+    // Bloqueia o envio se o usuário digitou menos que os 11 dígitos obrigatórios do CPF
+    if (cpfLimpo.length !== 11) {
+        alert("Erro! O CPF digitado está incompleto. Verifique os números.");
+        return;
+    }
 
     const payloadUsuario = {
         nome: document.getElementById("usr-nome").value.trim(),
@@ -49,7 +62,6 @@ async function processarCadastroDeUsuario(event) {
     };
 
     try {
-        // Validação de duplicidade de CPF (Apenas para novos cadastros)
         if (!idUsuario) {
             const cpfExiste = cacheUsuariosLocal.some(u => u.cpf.replace(/\D/g, "") === cpfLimpo);
             if (cpfExiste) {
@@ -167,7 +179,7 @@ async function processarCadastroDeDestino(event) {
         });
 
         if (res.ok) {
-            alert(idDestino ? "Unidade de destino atualizada com sucesso!" : "Novo destino homologado com sucesso!");
+            alert(idDestino ? "Unidade de destino updated com sucesso!" : "Novo destino homologado com sucesso!");
             cancelarEdicaoDestino();
             await carregarDestinosCadastrados();
         } else {
@@ -229,9 +241,6 @@ function cancelarEdicaoDestino() {
     document.getElementById("container-botoes-destino").innerHTML = `<button type="submit" class="btn-apple" style="height: 38px; background-color: var(--verde-apple);">Homologar Local</button>`;
 }
 
-/**
- * MOTOR DE EXCLUSÃO UNIVERSAL: Envia comando DELETE seguro para as tabelas na nuvem
- */
 async function excluirRegistroGeral(tabela, id, nomeInformativo) {
     if (!confirm(`🚨 ATENÇÃO CONTÁBIL!\n\nDeseja realmente excluir permanentemente o registro [${nomeInformativo}] da tabela de ${tabela.toUpperCase()}?\nEsta ação não poderá ser desfeita no MongoDB Atlas.`)) {
         return;
