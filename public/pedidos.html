@@ -15,29 +15,32 @@
             margin-bottom: 12px;
             animation: surgirSuave 0.2s ease-out;
         }
+        @keyframes surgirSuave {
+            from { opacity: 0; transform: scale(0.98) translateY(5px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar Translúcida macOS Injetada via JS -->
+    <!-- Sidebar Injetada via JS -->
     <aside id="sidebar" class="sidebar"></aside>
 
     <main class="main-content">
         <header class="page-header">
             <div>
                 <h1>Requisições & Pedidos de Compra</h1>
-                <p>Solicite a aquisição de novos insumos e materiais. Administradores realizam a conferência e recebimento fiscal.</p>
+                <p>Solicite a aquisição de novos suprimentos. Administradores realizam a conferência visual e o recebimento fiscal lado a lado.</p>
             </div>
         </header>
 
-        <!-- ================= PAINEL DE CRIAÇÃO DO PEDIDO (TODOS OS USUÁRIOS) ================= -->
+        <!-- FORMULÁRIO DE SOLICITAÇÃO (TODOS OS PERFIS) -->
         <div class="painel-operacional">
             <div class="painel-titulo">🛒 Nova Requisição de Suprimentos (Em Lote)</div>
             <form id="form-pedido-compra" onsubmit="salvarPedidoDeCompraNaNuvem(event)">
-                
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
                     <div class="campo-grupo">
-                        <label for="ped-admin-alvo">Enviar Pedido para Análise de qual Nutricionista (Admin)?</label>
+                        <label>Enviar Pedido para qual Nutricionista (Admin)?</label>
                         <select id="ped-admin-alvo" required>
                             <option value="">Carregando administradores...</option>
                         </select>
@@ -49,9 +52,9 @@
                     </div>
                 </div>
 
-                <!-- Container onde as linhas do Grid de Compras serão injetadas -->
+                <!-- Container do Grid de Compras -->
                 <div id="container-grid-itens-pedido" style="margin-bottom: 20px; padding: 5px 0;">
-                    <!-- Injetado dinamicamente via JS -->
+                    <!-- Injetado via JS -->
                 </div>
 
                 <div style="display: flex; justify-content: flex-end;">
@@ -61,9 +64,10 @@
                 </div>
             </form>
         </div>
-        <!-- ================= LISTAGEM E PAINEL DE AUDITORIA DE PEDIDOS ================= -->
-        <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; margin-top: 30px;">Histórico e Acompanhamento de Pedidos</h2>
-        <div class="tabela-container">
+
+        <!-- HISTÓRICO DE REQUISIÇÕES MUNICIPAIS -->
+        <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; margin-top: 30px;">Histórico de Acompanhamento de Pedidos</h2>
+        <div class="tabela-container" style="margin-bottom: 40px;">
             <table class="tabela-mac">
                 <thead>
                     <tr>
@@ -75,9 +79,65 @@
                     </tr>
                 </thead>
                 <tbody id="corpo-tabela-pedidos">
-                    <!-- Injetado dinamicamente via JS -->
+                    <!-- Injetado via JS -->
                 </tbody>
             </table>
+        </div>
+        <!-- ================= PANEL DE CONFERÊNCIA FISCAL LADO A LADO ================= -->
+        <div id="painel-conferencia-pedido" class="painel-operacional" style="display: none; border: 2px solid var(--azul-apple);">
+            <div class="painel-titulo" style="color: var(--azul-apple); justify-content: space-between; display: flex; width: 100%;">
+                <span>⚖️ Conferência Fiscal: Pedido <span id="conf-codigo-titulo">---</span></span>
+                <button type="button" class="btn-apple" style="background: var(--cinza-texto-secundario); padding: 4px 10px; font-size: 0.8rem;" onclick="fecharJanelaConferenciaLadoAlado()">Fechar</button>
+            </div>
+            
+            <input type="hidden" id="conf-pedido-id-oculto">
+
+            <!-- Split-Screen macOS Style: Solicitado vs Atendido -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px;">
+                
+                <!-- Coluna Esquerda: O Pedido Original (Bloqueado) -->
+                <div style="background: rgba(0,0,0,0.02); padding: 20px; border-radius: var(--radius-mac); border: 1px dashed rgba(0,0,0,0.1);">
+                    <h3 style="font-size: 0.85rem; font-weight: 700; color: var(--cinza-texto-secundario); margin-bottom: 15px; text-transform: uppercase;">🛒 1. Solicitado pelo Almoxarifado</h3>
+                    <div id="coluna-itens-solicitados" style="display: flex; flex-direction: column; gap: 12px;">
+                        <!-- Injetado via JS -->
+                    </div>
+                </div>
+
+                <!-- Coluna Direita: O Recebimento Real (Editável) -->
+                <div style="background: rgba(52, 199, 89, 0.03); padding: 20px; border-radius: var(--radius-mac); border: 1px solid rgba(52, 199, 89, 0.2);">
+                    <h3 style="font-size: 0.85rem; font-weight: 700; color: var(--verde-apple); margin-bottom: 15px; text-transform: uppercase;">🚛 2. Atendido e Entregue pelo Fornecedor</h3>
+                    
+                    <!-- Dados Obrigatórios do Lote para Entrada de Estoque Automática -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.05);">
+                        <div class="campo-grupo">
+                            <label style="font-size: 0.75rem;">Nº da Nota Fiscal</label>
+                            <input type="text" id="conf-nf-numero" required placeholder="Ex: NF-2026">
+                        </div>
+                        <div class="campo-grupo">
+                            <label style="font-size: 0.75rem;">Nº do Lote de Entrada</label>
+                            <input type="text" id="conf-lote-numero" required placeholder="Ex: LOTE-A">
+                        </div>
+                        <div class="campo-grupo">
+                            <label style="font-size: 0.75rem;">Data de Validade</label>
+                            <input type="date" id="conf-validade-data" required>
+                        </div>
+                        <div class="campo-grupo">
+                            <label style="font-size: 0.75rem;">Estoque Mínimo Alerta</label>
+                            <input type="number" id="conf-minimo-qtd" required placeholder="Ex: 10">
+                        </div>
+                    </div>
+
+                    <div id="coluna-itens-atendidos" style="display: flex; flex-direction: column; gap: 12px;">
+                        <!-- Injetado via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 25px; padding-top: 15px; border-top: 1px solid rgba(0,0,0,0.05);">
+                <button type="button" class="btn-apple" style="background-color: var(--verde-apple); height: 40px; font-weight: 600;" onclick="salvarHomologacaoLadoALadoNaNuvem()">
+                    Homologar e Injetar no Estoque Real ✅
+                </button>
+            </div>
         </div>
     </main>
 

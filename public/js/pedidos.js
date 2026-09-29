@@ -1,6 +1,6 @@
 /* ==========================================================================
-   SCRIPT DE LOGÍSTICA - REQUISIÇÕES & PEDIDOS DE COMPRA EM GRID ERP
-   Controle de Permissões e Recebimento Fiscal no MongoDB Atlas
+   SCRIPT DE LOGÍSTICA - REQUISIÇÕES & BALANÇA LADO A LADO (COMPRAS)
+   Controle Comparativo e Entrada Automatizada de Estoque no Mongo Atlas
    ========================================================================== */
 
 let cacheAdministradoresLocal = [];
@@ -12,12 +12,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function inicializarModuloPedidos() {
     await carregarAdministradoresNoSeletor();
-    adicionarLinhaDeItemAoPedido(); // Já abre com uma linha vazia no Grid por padrão
+    adicionarLinhaDeItemAoPedido(); // Abre uma linha limpa no Grid por padrão
     await carregarHistoricoPedidos();
 }
 
 /**
- * Puxa os usuários do banco e filtra apenas quem é ADMINISTRADOR (Nutricionista)
+ * Alimenta o seletor com as Nutricionistas (Administradoras) ativas no banco
  */
 async function carregarAdministradoresNoSeletor() {
     const select = document.getElementById("ped-admin-alvo");
@@ -39,7 +39,7 @@ async function carregarAdministradoresNoSeletor() {
 }
 
 /**
- * Injeta uma nova linha de campos em GRID com métricas universais de mercado
+ * Cria uma nova linha no Grid de compras com as métricas industriais standard
  */
 function adicionarLinhaDeItemAoPedido() {
     const container = document.getElementById("container-grid-itens-pedido");
@@ -51,7 +51,7 @@ function adicionarLinhaDeItemAoPedido() {
     div.id = idLinha;
     div.className = "grid-linha-pedido";
     div.innerHTML = `
-        <input type="text" placeholder="Nome do Item a ser comprado (Ex: Gás P45, Arroz, Colheres)" class="ped-item-nome" required>
+        <input type="text" placeholder="Nome do Item a ser comprado (Ex: Arroz Tipo 1, Gás P45)" class="ped-item-nome" required>
         <input type="number" placeholder="Qtd" min="0.01" step="0.01" class="ped-item-qtd" required>
         <select class="ped-item-medida" required>
             <option value="KG">Quilo (KG)</option>
@@ -71,16 +71,15 @@ function adicionarLinhaDeItemAoPedido() {
 
 function removerLinhaDoGridPedido(idLinha) {
     const container = document.getElementById("container-grid-itens-pedido");
-    // Trava para não deixar o operador deletar se só houver uma linha ativa na tela
     if (container.children.length <= 1) {
-        alert("A requisição precisa conter pelo menos 1 item no Grid de Compras.");
+        alert("O pedido precisa conter no mínimo 1 item ativo no Grid.");
         return;
     }
     document.getElementById(idLinha).remove();
 }
 
 /**
- * Monta o pacote de dados estruturado do Grid e envia para a nuvem
+ * Salva a requisição estruturada na nuvem
  */
 async function salvarPedidoDeCompraNaNuvem(event) {
     event.preventDefault();
@@ -104,7 +103,6 @@ async function salvarPedidoDeCompraNaNuvem(event) {
         destinatario: adminDestino,
         itens: itensPedido,
         status: "PENDENTE",
-        // Campos extras para a rota genérica do server.js organizar a cronologia
         createdAt: new Date().toISOString()
     };
 
@@ -116,123 +114,197 @@ async function salvarPedidoDeCompraNaNuvem(event) {
         });
 
         if (res.ok) {
-            alert(`Pedido de Compra [${payloadPedido.codigo_pedido}] disparado com sucesso para a Nutrição!`);
+            alert(`Pedido de Compra [${payloadPedido.codigo_pedido}] enviado com sucesso!`);
             document.getElementById("form-pedido-compra").reset();
             document.getElementById("container-grid-itens-pedido").innerHTML = "";
             await inicializarModuloPedidos();
         } else {
-            alert("Erro na nuvem ao tentar registrar requisição.");
+            alert("Erro na nuvem ao registrar requisição.");
         }
-    } catch (e) {
-        console.error(e);
-    }
+    } catch (e) { console.error(e); }
 }
-/**
- * Busca todas as requisições gravadas no MongoDB e desenha a tabela com travas Apple-style
- */
+
 async function carregarHistoricoPedidos() {
     const tbody = document.getElementById("corpo-tabela-pedidos");
     if (!tbody) return;
 
     try {
         const res = await fetch('/api/pedidos');
-        // Filtra para ordenar cronologicamente por criação se o servidor devolver lista bruta
         cachePedidosLocal = await res.json();
         tbody.innerHTML = "";
 
         if (cachePedidosLocal.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--cinza-texto-secundario);">Nenhum pedido de compra emitido no município.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--cinza-texto-secundario);">Nenhum pedido registrado.</td></tr>`;
             return;
         }
 
         cachePedidosLocal.forEach(ped => {
-            const dataHora = new Date(ped.createdAt || new Date()).toLocaleString('pt-BR');
+            const dataHora = new Date(ped.createdAt).toLocaleString('pt-BR');
+            const resumoItensHtml = ped.itens.map(i => `<span class="badge-mac badge-cinza" style="margin-right:4px; margin-bottom:4px; display:inline-flex;">${i.nome}: <strong>${i.quantidade} ${i.unidade}</strong></span>`).join('');
             
-            // Transforma o sub-array do Grid em badges de leitura rápida estilo macOS
-            const resumoItensHtml = ped.itens.map(i => 
-                `<span class="badge-mac badge-cinza" style="margin-right:4px; margin-bottom:4px; display:inline-flex;">${i.nome}: <strong>${i.quantidade} ${i.unidade}</strong></span>`
-            ).join('');
-
-            // Define a cor do badge com base no andamento fiscal do processo
-            let classeBadgeStatus = "badge-laranja";
-            if (ped.status === 'RECEBIDO') classeBadgeStatus = "badge-verde";
-
-            // GATILHO DAS REGRAS DE PERMISSÃO: Exibe o botão de recebimento ou a label concluída
-            let acaoBotaoHtml = `<span style="font-size:0.8rem; color:var(--verde-apple); font-weight:600;">Entregue ✅</span>`;
+            let classeStatus = ped.status === 'RECEBIDO' ? 'badge-verde' : 'badge-laranja';
+            let acaoBotaoHtml = `<span style="color:var(--verde-apple); font-weight:600;">Homologado ✅</span>`;
             
             if (ped.status === 'PENDENTE') {
-                acaoBotaoHtml = `
-                    <button class="btn-apple" style="padding: 5px 12px; font-size: 0.8rem; background-color: var(--verde-apple);" onclick="executarRecebimentoFiscalDoPedido('${ped._id}')">
-                        Receber Carga
-                    </button>
-                `;
+                acaoBotaoHtml = `<button class="btn-apple" style="padding: 5px 12px; font-size: 0.8rem; background-color: var(--azul-apple);" onclick="abrirJanelaConferenciaLadoALado('${ped._id}')">Conferir & Receber</button>`;
             }
 
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td><strong>${ped.codigo_pedido}</strong><br><small style="color:var(--cinza-texto-secundario)">${dataHora}</small></td>
-                <td><small>De:</small> <strong>${ped.solicitante}</strong><br><small style="color:var(--cinza-texto-secundario)">Para: ${ped.destinatario}</small></td>
-                <td style="max-width: 380px; line-height: 1.6;">${resumoItensHtml}</td>
-                <td><span class="badge-mac ${classeBadgeStatus}">${ped.status}</span></td>
+                <td><strong>${ped.codigo_pedido}</strong><br><small>${dataHora}</small></td>
+                <td><small>Por:</small> <strong>${ped.solicitante}</strong><br><small>Para: ${ped.destinatario}</small></td>
+                <td>${resumoItensHtml}</td>
+                <td><span class="badge-mac ${classeStatus}">${ped.status}</span></td>
                 <td style="text-align: center;">${acaoBotaoHtml}</td>
             `;
             tbody.appendChild(tr);
         });
-
-    } catch (e) {
-        console.error("Erro técnico ao renderizar histórico de requisições:", e);
-    }
+    } catch (e) { console.error(e); }
 }
-
 /**
- * REGRA DE OURO DE SEGURANÇA: Aplica a trava de perfil exigida no escopo antes de consolidar a entrada
+ * Abre e monta a interface Split-Screen (Solicitado vs Atendido) carregando dados reais
  */
-async function executingRecebimentoFiscalDoPedido(idPedido) {
-    // 1. Recupera as informações do usuário ativo que está sentado na máquina tentando clicar
-    const sessaoLocal = localStorage.getItem("usuarioLogado");
-    if (!sessaoLocal) return;
+function abrirJanelaConferenciaLadoALado(idPedido) {
+    const sessao = JSON.parse(localStorage.getItem("usuarioLogado")) || { perfil: "OPERADOR" };
 
-    const usuarioLogado = JSON.parse(sessaoLocal);
-
-    // 🚨 TRAVA DO ESCOPO: Se o perfil do operador NÃO for Administrador (Nutricionista), aborta instantaneamente!
-    if (usuarioLogado.perfil !== 'ADMINISTRADOR') {
-        alert(`🚨 ACESSO BLOQUEADO POR REGRA FISCAL!\n\nOlá, ${usuarioLogado.nome}.\nO seu perfil está configurado como [${usuarioLogado.perfil}]. O regulamento municipal estabelece que apenas usuários ADMINISTRADORES (Nutricionistas) possuem autorização jurídica para conferir e dar o recebimento físico de notas e pedidos no estoque.`);
+    // 🔒 TRAVA DE PERFIL EXIGIDA: Barra o recebimento por usuários comuns
+    if (sessao.perfil !== 'ADMINISTRADOR') {
+        alert(`🚨 ACESSO BLOQUEADO!\n\nO seu perfil está configurado como [${sessao.perfil}]. A conferência e o recebimento de pedidos de compra são de competência exclusiva de usuários ADMINISTRADORES.`);
         return;
     }
 
-    // Se passou na trava (é Administrador), prossegue para atualizar o status na nuvem
-    const pedidoSelecionado = cachePedidosLocal.find(p => p._id === idPedido);
-    if (!pedidoSelecionado) return;
+    const ped = cachePedidosLocal.find(p => p._id === idPedido);
+    if (!ped) return;
 
-    if (!confirm(`Deseja homologar o recebimento físico completo da carga do pedido ${pedidoSelecionado.codigo_pedido}?\nOs itens passarão para o status de conferidos no Almoxarifado Central.`)) {
+    document.getElementById("conf-pedido-id-oculto").value = ped._id;
+    document.getElementById("conf-codigo-titulo").innerText = ped.codigo_pedido;
+
+    const colSolicitado = document.getElementById("coluna-itens-solicitados");
+    const colAtendido = document.getElementById("coluna-itens-atendidos");
+    
+    colSolicitado.innerHTML = "";
+    colAtendido.innerHTML = "";
+
+    // Reconstrói as duas colunas em sincronia paralela perfeita
+    ped.itens.forEach((item, index) => {
+        // Coluna Esquerda: Estática (Pedido Original)
+        colSolicitado.innerHTML += `
+            <div style="height: 38px; display:flex; align-items:center; font-size:0.9rem;">
+                📌 <strong>${item.nome}</strong>: &nbsp;<span style="color:var(--azul-apple); font-weight:700;">${item.quantidade} ${item.unidade}</span>
+            </div>
+        `;
+
+        // Coluna Direita: Editável (O que será atendido)
+        colAtendido.innerHTML += `
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; align-items: center;" class="linha-atendimento-controle">
+                <input type="text" class="conf-item-nome-f" value="${item.nome}" readonly style="background: rgba(0,0,0,0.02); height: 38px;">
+                <input type="number" step="0.01" min="0" class="conf-item-qtd-f" value="${item.quantidade}" data-medida="${item.unidade}" style="border-color: var(--verde-apple); height: 38px;">
+            </div>
+        `;
+    });
+
+    // Injeta a data atual padrão de fábrica no campo de validade para facilitar
+    document.getElementById("conf-validade-data").value = new Date().toISOString().split('T')[0];
+    document.getElementById("painel-conferencia-pedido").style.display = "block";
+    
+    // Rola suavemente a tela do navegador para focar na janela de conferência
+    document.getElementById("painel-conferencia-pedido").scrollIntoView({ behavior: 'smooth' });
+}
+
+function fecharJanelaConferenciaLadoAlado() {
+    document.getElementById("painel-conferencia-pedido").style.display = "none";
+}
+
+/**
+ * HOMOLOGAÇÃO LADO A LADO: Consolida as alterações e injeta lotes automaticamente no estoque real
+ */
+async function salvarHomologacaoLadoALadoNaNuvem() {
+    const idPedido = document.getElementById("conf-pedido-id-oculto").value;
+    const nfNumero = document.getElementById("conf-nf-numero").value.trim();
+    const loteNumero = document.getElementById("conf-lote-numero").value.trim();
+    const dataValidade = document.getElementById("conf-validade-data").value;
+    const estoqueMinimo = Number(document.getElementById("conf-minimo-qtd").value);
+
+    if (!nfNumero || !loteNumero || !dataValidade || !estoqueMinimo) {
+        alert("Preencha todos os metadados fiscais da carga (Nota, Lote, Validade e Estoque Mínimo).");
+        return;
+    }
+
+    const pedidoReal = cachePedidosLocal.find(p => p._id === idPedido);
+    const linhasAtendidas = document.querySelectorAll(".linha-atendimento-controle");
+    const sessao = JSON.parse(localStorage.getItem("usuarioLogado")) || { nome: "Nutricionista" };
+
+    if (!confirm("Confirmar a homologação contábil? Todos os itens listados serão injetados de forma imediata como lotes operacionais no estoque.")) {
         return;
     }
 
     try {
-        // Altera o status local do objeto
-        pedidoSelecionado.status = "RECEBIDO";
+        // 1. Processa item por item da coluna da direita (Atendido) para alimentar o estoque
+        for (let linha of linhasAtendidas) {
+            const nomeInsumo = linha.querySelector(".conf-item-nome-f").value;
+            const qtdEntregue = Number(linha.querySelector(".conf-item-qtd-f").value);
+            const metricaInsumo = linha.querySelector(".conf-item-qtd-f").getAttribute("data-medida");
 
-        // Como o server.js possui a rota universal de POST que faz overwrite ou cria objetos, 
-        // nós enviamos o objeto inteiro atualizado de volta para a nuvem consolidar
-        const res = await fetch('/api/salvar/pedidos', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(pedidoSelecionado)
-        });
+            // Ignora o item caso o fornecedor tenha cortado o produto da entrega (quantidade zerada)
+            if (qtdEntregue <= 0) continue;
 
-        if (res.ok) {
-            alert(`Sucesso! Carga do Pedido ${pedidoSelecionado.codigo_pedido} conferida e recebida no sistema com sucesso.`);
-            await carregarHistoricoPedidos();
-        } else {
-            alert("Erro ao salvar atualização de recebimento na nuvem.");
+            // Invoca a mesma inteligência do fluxo de entradas para salvar/criar produtos e lotes na nuvem
+            const resProd = await fetch('/api/produtos');
+            const produtos = await resProd.json();
+            
+            let prodExistente = produtos.find(p => p.nome_produto.toLowerCase() === nomeInsumo.toLowerCase());
+            let produtoId = prodExistente ? prodExistente._id : null;
+
+            if (!prodExistente) {
+                // Cria o produto no catálogo geral de forma oculta e automática
+                const novoProdRes = await fetch('/api/salvar/produtos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nome_produto: nomeInsumo,
+                        categoria_item: "Insumo Alimentar", // Categoria padrão adaptável
+                        metrica_base: metricaInsumo === "LATAS" || metricaInsumo === "GALÕES" || metricaInsumo === "FARDO" || metricaInsumo === "CAIXA" || metricaInsumo === "PACOTE" ? "OUTRAS" : metricaInsumo
+                    })
+                });
+                const resultadoNovoProd = await novoProdRes.json();
+                produtoId = resultadoNovoProd.id;
+            }
+
+            // Constrói o lote com saldo operacional cheio e vincula ao ID do produto
+            const payloadLoteAutomático = {
+                produto_id: produtoId,
+                nome_produto_snapshot: nomeInsumo,
+                quantidade_inicial: qtdEntregue,
+                quantidade_atual: qtdEntregue, 
+                tipo_documento: "NOTA FISCAL",
+                numero_documento: nfNumero,
+                estoque_minimo: estoqueMinimo,
+                data_validade: new Date(dataValidade).toISOString(),
+                numero_lote: loteNumero,
+                usuario_responsavel: sessao.nome
+            };
+
+            await fetch('/api/salvar/entradas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payloadLoteAutomático)
+            });
         }
 
-    } catch (e) {
-        console.error("Erro na comunicação com a API ao fechar pedido:", e);
-    }
-}
+        // 2. Altera o status da requisição de PENDENTE para RECEBIDO e atualiza a nuvem
+        pedidoReal.status = "RECEBIDO";
+        await fetch('/api/salvar/pedidos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(pedidoReal)
+        });
 
-// Fallback de escrita para contornar qualquer variação de digitação de clique do botão HTML
-function executarRecebimentoFiscalDoPedido(id) {
-    executingRecebimentoFiscalDoPedido(id);
+        alert("Homologação concluída com sucesso! Os lotes de mercadoria já estão ativos nas prateleiras virtuais.");
+        fecharJanelaConferenciaLadoAlado();
+        await inicializarModuloPedidos();
+
+    } catch (e) {
+        console.error("Erro na automação do split-screen contábil:", e);
+        alert("Falha de rede ao tentar injetar a carga no estoque.");
+    }
 }
