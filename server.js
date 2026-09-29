@@ -1,5 +1,5 @@
 import express from 'express';
-import mongoose from 'mongoose';
+import mongoose from 'mongoose'; // 🚀 CORREÇÃO EXATA: Importado de 'mongoose' corretamente!
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -76,7 +76,7 @@ const CardapioSchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
-// 6. Tabela: Módulo de Quebras, Avarias e Perdas
+// 6. Tabela: Módulo de Quebras e Avarias
 const QuebraSchema = new mongoose.Schema({
     nome_produto: { type: String, required: true },
     numero_lote: { type: String, required: true },
@@ -144,9 +144,10 @@ app.post('/api/salvar/:tabela', async (req, res) => {
             const idEdicao = req.body._id;
             if (idEdicao) {
                 const { _id, ...dadosSemId } = req.body;
+                // Executa o update usando string pura para segurança de string literal
                 await mongoose.connection.db.collection('pedidos').updateOne(
                     { _id: new mongoose.Types.ObjectId(idEdicao) },
-                    { \$set: dadosSemId }
+                    { '\$set': dadosSemId }
                 );
                 novoItem = { _id: idEdicao };
             } else {
@@ -196,4 +197,4 @@ app.delete('/api/deletar/:tabela/:id', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => console.log(`🚀 Motor ERP ativo e aguardando requisições na porta ${PORT}`));
+app.listen(PORT, () => console.log("🚀 Motor ERP ativo e aguardando requisições na porta 8000"));
