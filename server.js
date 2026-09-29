@@ -85,7 +85,7 @@ const QuebraSchema = new mongoose.Schema({
     usuario_responsavel: { type: String, required: true }
 }, { timestamps: true });
 
-// 🏢 EXCLUSIVO: 7. Tabela de Destinos Dinâmicos Cadastrados pela Nutricionista
+// 7. Tabela de Destinos Dinâmicos Cadastrados pela Nutricionista
 const DestinoSchema = new mongoose.Schema({
     nome_local: { type: String, required: true, unique: true }
 }, { timestamps: true });
@@ -116,6 +116,11 @@ app.get('/api/:tabela', async (req, res) => {
         if (tabela === 'quebras') colecao = await Quebra.find().sort({ createdAt: -1 });
         if (tabela === 'destinos') colecao = await Destino.find().sort({ nome_local: 1 });
         
+        // 🚀 Suporte nativo para a leitura do histórico do Grid de Compras
+        if (tabela === 'pedidos') {
+            colecao = await mongoose.connection.db.collection('pedidos').find().toArray();
+        }
+        
         res.json(colecao);
     } catch (e) {
         res.status(500).json({ erro: `Falha ao requisitar dados da tabela: ${req.params.tabela}` });
@@ -136,13 +141,29 @@ app.post('/api/salvar/:tabela', async (req, res) => {
         if (tabela === 'quebras') novoItem = await new Quebra(req.body).save();
         if (tabela === 'destinos') novoItem = await new Destino(req.body).save();
         
+        // 🚀 Suporte nativo para gravação e fechamento do Grid de compras na nuvem
+        if (tabela === 'pedidos') {
+            const idEdicao = req.body._id;
+            if (idEdicao) {
+                const { _id, ...dadosSemId } = req.body;
+                await mongoose.connection.db.collection('pedidos').updateOne(
+                    { _id: new mongoose.Types.ObjectId(idEdicao) },
+                    { \$set: dadosSemId }
+                );
+                novoItem = { _id: idEdicao };
+            } else {
+                const resultadoInsercao = await mongoose.connection.db.collection('pedidos').insertOne(req.body);
+                novoItem = { _id: resultadoInsercao.insertedId };
+            }
+        }
+        
         res.json({ sucesso: true, id: novoItem._id });
     } catch (e) {
         res.status(500).json({ erro: `Falha ao processar inserção na tabela: ${req.params.tabela}` });
     }
 });
 
-// ✏️ NOVA ROTA: Edição e Atualização Customizada de Registros (PUT)
+// ✏️ ROTA: Edição e Atualização Customizada de Registros (PUT)
 app.put('/api/editar/:tabela/:id', async (req, res) => {
     try {
         const { tabela, id } = req.params;
@@ -161,7 +182,7 @@ app.put('/api/editar/:tabela/:id', async (req, res) => {
     }
 });
 
-// 🚨 NOVA ROTA: Exclusão Permanente de Registros na Nuvem (DELETE)
+// 🚨 ROTA: Exclusão Permanente de Registros na Nuvem (DELETE)
 app.delete('/api/deletar/:tabela/:id', async (req, res) => {
     try {
         const { tabela, id } = req.params;
