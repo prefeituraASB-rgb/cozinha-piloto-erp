@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SCRIPT GLOBAL - CONTROLE DO MENU LATERAL DINÂMICO
+   SCRIPT GLOBAL - CONTROLE DO MENU LATERAL DINÂMICO COM PEDIDOS DE COMPRA
    Garante a consistência visual estilo macOS em todas as telas
    ========================================================================= */
 
@@ -30,6 +30,9 @@ document.addEventListener("DOMContentLoaded", () => {
             </li>
             <li>
                 <a href="entradas.html" class="${paginaAtual === 'entradas.html' ? 'active' : ''}">🍎 Cadastrar Itens / NF</a>
+            </li>
+            <li>
+                <a href="pedidos.html" class="${paginaAtual === 'pedidos.html' ? 'active' : ''}">🛒 Pedidos de Compra</a>
             </li>
             <li>
                 <a href="saidas.html" class="${paginaAtual === 'saidas.html' ? 'active' : ''}">📤 Saídas / Destinos</a>

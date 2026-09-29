@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos de Compra - ERP Cozinha Piloto</title>
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/operacoes.css">
+    <style>
+        .grid-linha-pedido {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+            animation: surgirSuave 0.2s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Translúcida macOS Injetada via JS -->
+    <aside id="sidebar" class="sidebar"></aside>
+
+    <main class="main-content">
+        <header class="page-header">
+            <div>
+                <h1>Requisições & Pedidos de Compra</h1>
+                <p>Solicite a aquisição de novos insumos e materiais. Administradores realizam a conferência e recebimento fiscal.</p>
+            </div>
+        </header>
+
+        <!-- ================= PAINEL DE CRIAÇÃO DO PEDIDO (TODOS OS USUÁRIOS) ================= -->
+        <div class="painel-operacional">
+            <div class="painel-titulo">🛒 Nova Requisição de Suprimentos (Em Lote)</div>
+            <form id="form-pedido-compra" onsubmit="salvarPedidoDeCompraNaNuvem(event)">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                    <div class="campo-grupo">
+                        <label for="ped-admin-alvo">Enviar Pedido para Análise de qual Nutricionista (Admin)?</label>
+                        <select id="ped-admin-alvo" required>
+                            <option value="">Carregando administradores...</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: flex-end;">
+                        <button type="button" class="btn-apple" style="background-color: var(--cinza-texto-secundario); height: 38px; width: 100%;" onclick="adicionarLinhaDeItemAoPedido()">
+                            + Adicionar Item ao Grid
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Container onde as linhas do Grid de Compras serão injetadas -->
+                <div id="container-grid-itens-pedido" style="margin-bottom: 20px; padding: 5px 0;">
+                    <!-- Injetado dinamicamente via JS -->
+                </div>
+
+                <div style="display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn-apple" style="background-color: var(--azul-apple); height: 40px; font-weight: 600;">
+                        Disparar Pedido de Compra
+                    </button>
+                </div>
+            </form>
+        </div>
+        <!-- ================= LISTAGEM E PAINEL DE AUDITORIA DE PEDIDOS ================= -->
+        <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; margin-top: 30px;">Histórico e Acompanhamento de Pedidos</h2>
+        <div class="tabela-container">
+            <table class="tabela-mac">
+                <thead>
+                    <tr>
+                        <th>Cód Pedido / Data</th>
+                        <th>Solicitante / Destinatário</th>
+                        <th>Itens Solicitados (Grid)</th>
+                        <th>Status Atual</th>
+                        <th style="text-align: center;">Ações Fiscais</th>
+                    </tr>
+                </thead>
+                <tbody id="corpo-tabela-pedidos">
+                    <!-- Injetado dinamicamente via JS -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="js/autenticador-sessao.js"></script>
+    <script src="js/menu.js"></script>
+    <script src="js/pedidos.js"></script>
+</body>
+</html>
